@@ -1,34 +1,31 @@
 ################################
-# type: subject
+# Type: subject
 ################################
-# feat : 새로운 기능을 추가할 경우
-# fix : 버그를 고친 경우
-# design : CSS 등 UI 변경한 경우
-# !breaking change : 커다란 API 변경의 경우
-# !hotfix : 급하게 치명적인 버그를 고쳐야 하는 경우
-# style : 코드 포맷 변경, 세미 콜론 누락, 코드 수정이 없는 경우
-# refactor : 프로덕션 코드 리팩토링
-# comment : 필요한 주석 추가 및 변경
-# docs : 문서를 수정한 경우
-# test : 테스트 추가, 테스트 코드 리팩토링 (프로덕션 코드 변경 X)
-# chore : 빌드 테스트 업데이트, 패키지 매니저를 설정하는 경우
-#	(프로덕션 코드 변경 X)
-# rename : 파일 혹은 폴더명을 수정하거나 옮기는 작업만인 경우
-# remove : 파일을 삭제하는 작업만 수행한 경우
+# Feat : a new feature
+# Fix : a bug fix
+# Design : changes of UI (e.g. CSS)
+# Style : formatting, missing semi-colons, etc; no code changes
+# Refactor : refactor production code
+# Comment : adding or modifying comments
+# Docs : changes of documentations
+# Test : adding tests,
+#        refactoring test codes; no production code changes
+# Rename : rename, move files or directories
+# Remove : delete files or directories
+# Create : create, upload new files or new directories
 ##################################
 
 
 ##################################
-# body(본문)를 아랫줄에 작성
+# body
 ##################################
 
 
 ##################################
-# footer(꼬리말)를 아랫줄에 작성
+# footer
 ##################################
-# Fixes : 이슈 수정 중 (아직 해결되지 않은 경우)
-# Resolves : 이슈를 해결했을 때 사용
-# Ref : 참고할 이슈가 있을 때 사용
-# Related to : 해당 커밋에 관련된 이슈가 있을 때 사용
-#	(아직 해결되지 않은 경우)
+# Fixes : fixing issues (not resolved yet)
+# Resolves : resolve issues
+# Related to : issues related to this commit
+#        (not resolved yet)
 ##################################
