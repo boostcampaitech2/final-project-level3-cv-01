@@ -1,0 +1,10 @@
+# train and val datasets (image directory or *.txt file with image paths)
+train: /opt/ml/local_fin/web/train/images  # 118k images
+val: /opt/ml/local_fin/web/val/images  # 5k images
+test: /opt/ml/local_fin/web/test/images  # 20k images for submission to https://competitions.codalab.org/competitions/20794
+
+# number of classes
+nc: 4
+
+# class names
+names: ['AH', 'A~H', '~AH', '~A~H']
