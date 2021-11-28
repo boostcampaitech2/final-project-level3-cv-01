@@ -150,7 +150,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
     # Logging
     if wandb and wandb.run is None:
         opt.hyp = hyp  # add hyperparameters
-        wandb_run = wandb.init(config=opt, resume="allow", entity='perforated_line',
+        wandb_run = wandb.init(config=opt, resume="allow", entity=opt.entity,
                                project='YOLOR' if opt.project == 'runs/train' else Path(opt.project).stem,
                                name=save_dir.stem,
                                id=ckpt.get('wandb_id') if 'ckpt' in locals() else None)
@@ -487,6 +487,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('--entity', type=str, default='perforated_line', help='wandb entity name')
     parser.add_argument('--weights', type=str, default='yolor-p6.pt', help='initial weights path')
     parser.add_argument('--cfg', type=str, default='', help='model.yaml path')
     parser.add_argument('--data', type=str, default='data/coco.yaml', help='data.yaml path')
