@@ -1294,3 +1294,8 @@ def flatten_recursive(path='../coco128'):
     create_folder(new_path)
     for file in tqdm(glob.glob(str(Path(path)) + '/**/*.*', recursive=True)):
         shutil.copyfile(file, new_path / Path(file).name)
+
+
+def rgb2gray(image):
+    image = np.dot(image[...,:3], [0.2989, 0.5870, 0.1140]).astype(np.uint8)
+    return np.repeat(image[..., np.newaxis], 3, axis=-1)
