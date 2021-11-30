@@ -8,6 +8,7 @@ Dependency 설치
 pip install -r requirements.txt
 ```
 
+앱 실행
 ```
-
+streamlit run streamlit-app.py
 ```
