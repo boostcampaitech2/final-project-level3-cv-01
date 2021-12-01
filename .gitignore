@@ -1,5 +1,6 @@
 **/__pycache__/
-
+**/runs/
 **/wandb/
 
+**/pretrained/
 web/yolor-d6.pt
