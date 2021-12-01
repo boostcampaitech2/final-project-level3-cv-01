@@ -5,25 +5,18 @@ import os
 import tempfile
 import torch
 sys.path.append(os.getcwd())
-# import traffic_counter as tc
 import cv2 
 import time
 import utils.SessionState as SessionState
 from random import randint
-from streamlit import caching
-import streamlit.report_thread as ReportThread 
 from streamlit.server.server import Server
-import copy
-# from components.custom_slider import custom_slider
 
 from models.experimental import attempt_load
-from utils.datasets import LoadStreams, LoadImages
-from utils.general import check_img_size, non_max_suppression, apply_classifier, scale_coords, xyxy2xywh, \
-    strip_optimizer, set_logging, increment_path
-from utils.plots import plot_one_box
-from utils.torch_utils import select_device, load_classifier, time_synchronized
-from pathlib import Path
+from utils.general import non_max_suppression
+from utils.torch_utils import select_device
 
+
+device = select_device('')
 
 @st.cache(
     hash_funcs={
@@ -47,7 +40,7 @@ def load_yolo_model(pt_file):
     """
     wrapper func to load and cache object detector 
     """
-    device = select_device('cpu')
+    device = select_device('')
     obj_detector = attempt_load(pt_file, map_location=device)
 
     return obj_detector
@@ -58,7 +51,8 @@ def DetermineBoxCenter(box):
 
     return [cx, cy]    
 
-def drawBoxes(frame, pred):
+def drawBoxes(frame, pred, thres = 0.8): # thres 조절 추가 예정
+    pred = pred.to('cpu')
     boxColor = (128, 255, 0) # very light green
     boxColor = {
         0: (128, 255, 0),
@@ -71,13 +65,19 @@ def drawBoxes(frame, pred):
     textThickness = 2
 
     for x1, y1, x2, y2, conf, lbl in pred:
+        if conf < thres:
+            break
+        lbl = int(lbl)
+        if lbl not in [0,1,2,3]:
+            continue
+        x1, y1, x2, y2, conf = int(x1), int(y1), int(x2), int(y2), float(conf) # tensor to float
         start_coord = (x1, y1)
         # w, h = box[2:]
         # end_coord = start_coord[0] + w, start_coord[1] + h
         end_coord = (x2, y2)
         cx, cy = int(x1 + x2/2), int(y1 + y2/2) # 박스중심좌표
     # text to be included to the output image
-        txt = '{} ({})'.format(', '.join([str(i) for i in [cx, cy]]), round(conf,3))
+        txt = '{} ({})'.format(', '.join([str(i) for i in [cx, cy]]), round(conf, 3))
         frame = cv2.rectangle(frame, start_coord, end_coord, boxColor[lbl], boxThickness)
         frame = cv2.putText(frame, txt, start_coord, cv2.FONT_HERSHEY_SIMPLEX, 0.5, TextColor, 2)
 
@@ -94,20 +94,19 @@ def main():
     start_button = st.empty()
     stop_button = st.empty()
 
-    model = load_yolo_model('yolor-d6.pt')
+    model = load_yolo_model('yolor-d6.pt').eval()
 
 
     with upload:
         f = st.file_uploader('Upload Video file', key = state.upload_key)
-        print(f)
     
     if f is not None:
         tfile = tempfile.NamedTemporaryFile(delete = False)
         tfile.write(f.read())  
         upload.empty()
         vf = cv2.VideoCapture(tfile.name)
+        
         frameWidth = int(vf.get(cv2.CAP_PROP_FRAME_WIDTH))
-        print('frameWidth', frameWidth)
         if not state.run:
             start = start_button.button("start")
             state.start = start
@@ -122,24 +121,20 @@ def main():
                 state.upload_key = str(randint(1000, int(1e6)))
                 state.enabled = True
                 state.run = False
-                print(vf)
                 ProcessFrames(vf, model, stop_button)
             else:
                 state.run = True
                 trigger_rerun()
 
-
-def ProcessFrames(vf, obj_detector,stop): 
+def ProcessFrames(vf, obj_detector, stop): 
     """
         main loop for processing video file:
         Params
         vf = VideoCapture Object
-        tracker = Tracker Object that was instantiated 
         obj_detector = Object detector (model and some properties) 
     """
     frameWidth = int(vf.get(cv2.CAP_PROP_FRAME_WIDTH))	# 영상의 넓이(가로) 프레임
     frameHeight = int(vf.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    print(frameWidth, frameHeight)
     try:
         num_frames = int(vf.get(cv2.CAP_PROP_FRAME_COUNT))
         fps = int(vf.get(cv2.CAP_PROP_FPS)) 
@@ -160,25 +155,20 @@ def ProcessFrames(vf, obj_detector,stop):
     while vf.isOpened():
         # if frame is read correctly ret is True
         ret, frame = vf.read()
+        frame = cv2.resize(frame, (1280, 960)) # 추후 조절하는 기능 추가할 예정
         if _stop:
             break
         if not ret:
             print("Can't receive frame (stream end?). Exiting ...")
-        frame = np.transpose(frame, (2, 0, 1))
-        frame = torch.from_numpy(frame)
-        frame = frame.float()  # uint8 to fp16/32
-        frame /= 255.0  # 0 - 255 to 0.0 - 1.0
-        if frame.ndimension() == 3:
-            frame = frame.unsqueeze(0)
-        # import pdb; pdb.set_trace()
-        pred = obj_detector(frame)[0]
-        pred = non_max_suppression(pred)
-        print(pred)
-        # (x1, y1, x2, y2, conf, cls)
-        # labels, current_boxes, confidences = obj_detector.ForwardPassOutput(frame)
+        frame_tensor = np.transpose(frame, (2, 0, 1))
+        frame_tensor = torch.from_numpy(frame_tensor).to(device)
+        frame_tensor = frame_tensor.float()  # uint8 to fp16/32
+        frame_tensor /= 255.0  # 0 - 255 to 0.0 - 1.0
+        if frame_tensor.ndimension() == 3:
+            frame_tensor = frame_tensor.unsqueeze(0)
+        pred = obj_detector(frame_tensor)[0]
+        pred = non_max_suppression(pred)[0]
         frame = drawBoxes(frame, pred) 
-        # new_car_count = tracker.TrackCars(current_boxes)
-        # new_car_count_txt.markdown(f'**Total car count:** {new_car_count}')
 
         end = time.time()
 
