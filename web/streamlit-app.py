@@ -161,7 +161,7 @@ def ProcessFrames(vf, obj_detector, stop):
     fourcc = "mp4v"  # output video codec
     vid_writer = cv2.VideoWriter(
                             "/opt/ml/video/result.mp4", cv2.VideoWriter_fourcc(*fourcc), fps, (1280, 960)
-                        )
+                        ) # Warning: 마지막 파라미터(이미지 크기 예:(1280, 960))가 안 맞으면 동영상이 저장이 안 됨!
 
     while vf.isOpened():
         # if frame is read correctly ret is True
@@ -195,11 +195,10 @@ def ProcessFrames(vf, obj_detector, stop):
         fps_meas_txt.markdown(f'**Frames per second:** {fps_measurement:.2f}')
         bar.progress(frame_counter/num_frames)        
         vid_writer.write(frame)
-    ######### test mode ##########    
+        
     print('finish!')
     # 서버에 저장된 동영상 파일을 불러와 페이지에 띄우는 부분
     video_file = open("/opt/ml/video/result.mp4", 'rb')
     video_bytes = video_file.read()
     st.video(video_bytes)
-    ######### test mode ##########    
 main()
