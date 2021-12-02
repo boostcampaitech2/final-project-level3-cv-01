@@ -129,8 +129,11 @@ def main():
             else:
                 state.run = True
                 trigger_rerun()
+
+    ######## TEST MODE #######
     vf = cv2.VideoCapture('/opt/ml/video/GOPR1296.MP4')
     ProcessFrames(vf, model, stop_button)
+    ######## TEST MODE #######
 
 def ProcessFrames(vf, obj_detector, stop): 
     """
@@ -139,8 +142,6 @@ def ProcessFrames(vf, obj_detector, stop):
         vf = VideoCapture Object
         obj_detector = Object detector (model and some properties) 
     """
-    frameWidth = int(vf.get(cv2.CAP_PROP_FRAME_WIDTH))	# 영상의 넓이(가로) 프레임
-    frameHeight = int(vf.get(cv2.CAP_PROP_FRAME_HEIGHT))
     try:
         num_frames = int(vf.get(cv2.CAP_PROP_FRAME_COUNT))
         fps = int(vf.get(cv2.CAP_PROP_FPS)) 
@@ -171,7 +172,6 @@ def ProcessFrames(vf, obj_detector, stop):
             print('resize failed :', frame_counter)
             if frame_counter/num_frames == 1:
                 break
-            # frame_counter += 1
             continue
 
         if _stop:
@@ -193,15 +193,13 @@ def ProcessFrames(vf, obj_detector, stop):
         frame_counter += 1
         fps_measurement = frame_counter/(end - start)
         fps_meas_txt.markdown(f'**Frames per second:** {fps_measurement:.2f}')
-        # import pdb; pdb.set_trace()
-        print(frame_counter/num_frames)
-        bar.progress(frame_counter/num_frames)
-        # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        # stframe.image(frame, width = 720)
-        
+        bar.progress(frame_counter/num_frames)        
         vid_writer.write(frame)
+    ######### test mode ##########    
     print('finish!')
+    # 서버에 저장된 동영상 파일을 불러와 페이지에 띄우는 부분
     video_file = open("/opt/ml/video/result.mp4", 'rb')
     video_bytes = video_file.read()
     st.video(video_bytes)
+    ######### test mode ##########    
 main()
