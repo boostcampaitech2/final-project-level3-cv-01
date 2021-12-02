@@ -33,14 +33,13 @@ def trigger_rerun():
     session_infos = Server.get_current()._session_info_by_id.values() 
     for session_info in session_infos:
         this_session = session_info.session
-    # this_session.request_rerun(None)
+    # this_session.request_rerun()
     st.experimental_rerun()
 
-def load_yolo_model(pt_file):
+def load_yolo_model(pt_file, device):
     """
     wrapper func to load and cache object detector 
     """
-    device = select_device('')
     obj_detector = attempt_load(pt_file, map_location=device)
 
     return obj_detector
@@ -51,7 +50,7 @@ def DetermineBoxCenter(box):
 
     return [cx, cy]    
 
-def drawBoxes(frame, pred, thres = 0.8): # thres 조절 추가 예정
+def drawBoxes(frame, pred, thres = 0.9): # thres 조절 추가 예정
     pred = pred.to('cpu')
     boxColor = (128, 255, 0) # very light green
     boxColor = {
@@ -59,6 +58,12 @@ def drawBoxes(frame, pred, thres = 0.8): # thres 조절 추가 예정
         1: (255, 255, 0),
         2: (0, 0, 255),
         3: (255, 0, 0),
+    }
+    className = {
+        0: "Helmet",
+        1: "NoHelmet",
+        2: "SharingHelmet",
+        3: "Sharing",
     }
     TextColor = (255, 255, 255) # white
     boxThickness = 3 
@@ -77,7 +82,7 @@ def drawBoxes(frame, pred, thres = 0.8): # thres 조절 추가 예정
         end_coord = (x2, y2)
         cx, cy = int(x1 + x2/2), int(y1 + y2/2) # 박스중심좌표
     # text to be included to the output image
-        txt = '{} ({})'.format(', '.join([str(i) for i in [cx, cy]]), round(conf, 3))
+        txt = f'{className[lbl]} ({round(conf, 3)})'
         frame = cv2.rectangle(frame, start_coord, end_coord, boxColor[lbl], boxThickness)
         frame = cv2.putText(frame, txt, start_coord, cv2.FONT_HERSHEY_SIMPLEX, 0.5, TextColor, 2)
 
@@ -94,7 +99,7 @@ def main():
     start_button = st.empty()
     stop_button = st.empty()
 
-    model = load_yolo_model('yolor-d6.pt').eval()
+    model = load_yolo_model('yolor-d6.pt', device).eval()
 
 
     with upload:
@@ -105,8 +110,7 @@ def main():
         tfile.write(f.read())  
         upload.empty()
         vf = cv2.VideoCapture(tfile.name)
-        
-        frameWidth = int(vf.get(cv2.CAP_PROP_FRAME_WIDTH))
+
         if not state.run:
             start = start_button.button("start")
             state.start = start
@@ -125,6 +129,8 @@ def main():
             else:
                 state.run = True
                 trigger_rerun()
+    vf = cv2.VideoCapture('/opt/ml/video/GOPR1296.MP4')
+    ProcessFrames(vf, model, stop_button)
 
 def ProcessFrames(vf, obj_detector, stop): 
     """
@@ -151,11 +157,23 @@ def ProcessFrames(vf, obj_detector, stop):
     bar = st.progress(frame_counter)
     stframe = st.empty()
     start = time.time()
+    fourcc = "mp4v"  # output video codec
+    vid_writer = cv2.VideoWriter(
+                            "/opt/ml/video/result.mp4", cv2.VideoWriter_fourcc(*fourcc), fps, (1280, 960)
+                        )
 
     while vf.isOpened():
         # if frame is read correctly ret is True
         ret, frame = vf.read()
-        frame = cv2.resize(frame, (1280, 960)) # 추후 조절하는 기능 추가할 예정
+        try:
+            frame = cv2.resize(frame, (1280, 960)) # 추후 조절하는 기능 추가할 예정
+        except: 
+            print('resize failed :', frame_counter)
+            if frame_counter/num_frames == 1:
+                break
+            # frame_counter += 1
+            continue
+
         if _stop:
             break
         if not ret:
@@ -175,9 +193,15 @@ def ProcessFrames(vf, obj_detector, stop):
         frame_counter += 1
         fps_measurement = frame_counter/(end - start)
         fps_meas_txt.markdown(f'**Frames per second:** {fps_measurement:.2f}')
+        # import pdb; pdb.set_trace()
+        print(frame_counter/num_frames)
         bar.progress(frame_counter/num_frames)
-
-        frm = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        stframe.image(frm, width = 720)
-
+        # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        # stframe.image(frame, width = 720)
+        
+        vid_writer.write(frame)
+    print('finish!')
+    video_file = open("/opt/ml/video/result.mp4", 'rb')
+    video_bytes = video_file.read()
+    st.video(video_bytes)
 main()
