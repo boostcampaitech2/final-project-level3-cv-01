@@ -1,7 +1,9 @@
 # train and val datasets (image directory or *.txt file with image paths)
-train: /opt/ml/local_fin/web/train/images  # 118k images
-val: /opt/ml/local_fin/web/val/images  # 5k images
-test: /opt/ml/local_fin/web/test/images  # 20k images for submission to https://competitions.codalab.org/competitions/20794
+train: /opt/ml/final-project-level3-cv-01/data/train/images  # 118k images
+val: /opt/ml/final-project-level3-cv-01/data/val/images  # 5k images
+test: /opt/ml/final-project-level3-cv-01/data/test/images  # 20k images for submission to https://competitions.codalab.org/competitions/20794
+
+/opt/ml/final-project-level3-cv-01/data/test/images/self_0012.JPG
 
 # number of classes
 nc: 4
