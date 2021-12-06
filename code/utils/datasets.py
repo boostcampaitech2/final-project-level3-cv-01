@@ -609,18 +609,10 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
             # if random.random() < 0.9:
             #     labels = cutout(img, labels)
 
-        if random.random() < hyp['grayscale']:
-            img = rgb2gray(img)
-        if random.random() < hyp['imgaug']:
-            img = imgaug_(img)
+        # 이 부분에서 적용하시면 모자이크를 했을 때, 모자이크 전체에 적용이 됩니다.
+        #if random.random() < hyp['grayscale']:
+        #    img = rgb2gray(img)
 
-        # 추가, 
-        # 확률, 날씨, 채도, 명암, 엠보싱 등
-        #img = rgb2gray(img)
-        #cnt = 0
-        #print(cnt)
-        #cv2.imwrite('/opt/ml/yolor_d6/runs/train/gray4/' + str(cnt).zfill(4) + '.jpg',img)
-        #cnt += 1
 
 
         nL = len(labels)  # number of labels
@@ -905,20 +897,10 @@ class LoadImagesAndLabels9(Dataset):  # for training/testing
             # Apply cutouts
             # if random.random() < 0.9:
             #     labels = cutout(img, labels)
-        # 여기 모자이크9
+
+        # 여기 모자이크9, 이 부분에서 적용하시면 모자이크 된 이미지에 모두 처리가 됩니다.
         # if random.random() < hyp['grayscale']:
         #     img = rgb2gray(img)
-
-        #if random.random() < hyp['imgaug']:
-        #    img = imgaug_(img)
-
-        # 추가, 
-        # 확률, 날씨, 채도, 명암, 엠보싱 등
-        #img = rgb2gray(img)
-        #cnt = 0
-        #print(cnt)
-        #cv2.imwrite('/opt/ml/yolor_d6/runs/train/gray4/' + str(cnt).zfill(4) + '.jpg',img)
-        #cnt += 1
 
 
         nL = len(labels)  # number of labels
@@ -981,6 +963,7 @@ def load_image(self, index):
             interp = cv2.INTER_AREA if r < 1 and not self.augment else cv2.INTER_LINEAR
             img = cv2.resize(img, (int(w0 * r), int(h0 * r)), interpolation=interp)
 
+            # 이 부분에서 처리 하시면 각각의 이미지에 처리가 됩니다.
             if random.random() < hyp['grayscale']:
                 img = rgb2gray(img)
 
@@ -1226,9 +1209,13 @@ def random_perspective(img, targets=(), degrees=10, translate=.1, scale=.1, shea
     # Rotation and Scale
     R = np.eye(3)
 
+    # 로테이트 처리 하는 곳 입니다.
     a = random.uniform(-degrees, degrees)
+
     #a += random.choice([-180,-90,0,90])
     #s = random.uniform(1, 1 + scale)
+
+    # 스케일 크기 처리 하는 곳 입니다.
     s = random.uniform(1.0-scale, 0.8)
 
     # 기존 코드
