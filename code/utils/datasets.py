@@ -10,6 +10,7 @@ from itertools import repeat
 from multiprocessing.pool import ThreadPool
 from pathlib import Path
 from threading import Thread
+from typing import Sequence
 
 import cv2
 import numpy as np
@@ -26,6 +27,13 @@ from torchvision.ops import roi_pool, roi_align, ps_roi_pool, ps_roi_align
 
 from utils.general import xyxy2xywh, xywh2xyxy
 from utils.torch_utils import torch_distributed_zero_first
+
+import imgaug as ia
+import imgaug.augmenters as iaa
+
+import yaml
+
+
 
 # Parameters
 help_url = 'https://github.com/ultralytics/yolov5/wiki/Train-Custom-Data'
@@ -601,6 +609,20 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
             # if random.random() < 0.9:
             #     labels = cutout(img, labels)
 
+        if random.random() < hyp['grayscale']:
+            img = rgb2gray(img)
+        if random.random() < hyp['imgaug']:
+            img = imgaug_(img)
+
+        # 추가, 
+        # 확률, 날씨, 채도, 명암, 엠보싱 등
+        #img = rgb2gray(img)
+        #cnt = 0
+        #print(cnt)
+        #cv2.imwrite('/opt/ml/yolor_d6/runs/train/gray4/' + str(cnt).zfill(4) + '.jpg',img)
+        #cnt += 1
+
+
         nL = len(labels)  # number of labels
         if nL:
             labels[:, 1:5] = xyxy2xywh(labels[:, 1:5])  # convert xyxy to xywh
@@ -883,6 +905,21 @@ class LoadImagesAndLabels9(Dataset):  # for training/testing
             # Apply cutouts
             # if random.random() < 0.9:
             #     labels = cutout(img, labels)
+        # 여기 모자이크9
+        # if random.random() < hyp['grayscale']:
+        #     img = rgb2gray(img)
+
+        #if random.random() < hyp['imgaug']:
+        #    img = imgaug_(img)
+
+        # 추가, 
+        # 확률, 날씨, 채도, 명암, 엠보싱 등
+        #img = rgb2gray(img)
+        #cnt = 0
+        #print(cnt)
+        #cv2.imwrite('/opt/ml/yolor_d6/runs/train/gray4/' + str(cnt).zfill(4) + '.jpg',img)
+        #cnt += 1
+
 
         nL = len(labels)  # number of labels
         if nL:
@@ -925,6 +962,15 @@ class LoadImagesAndLabels9(Dataset):  # for training/testing
 def load_image(self, index):
     # loads 1 image from dataset, returns img, original hw, resized hw
     img = self.imgs[index]
+
+
+
+    # 모자이크에서 하는게 아닌 각 이미지마다 augmentation 적용
+    # hyp 불러오기
+    with open('/opt/ml/yolor_d6/data/hyp.scratch.1280.yaml') as f:
+        hyp = yaml.load(f, Loader=yaml.FullLoader)  # load hyps
+
+
     if img is None:  # not cached
         path = self.img_files[index]
         img = cv2.imread(path)  # BGR
@@ -934,6 +980,19 @@ def load_image(self, index):
         if r != 1:  # always resize down, only resize up if training with augmentation
             interp = cv2.INTER_AREA if r < 1 and not self.augment else cv2.INTER_LINEAR
             img = cv2.resize(img, (int(w0 * r), int(h0 * r)), interpolation=interp)
+
+            if random.random() < hyp['grayscale']:
+                img = rgb2gray(img)
+
+            if random.random() < hyp['imgaug']:
+                if random.random() < hyp['rain']:
+                    img = imgaug_rain(img)
+                elif random.random() < hyp['snow']:
+                    img = imgaug_snow(img)
+                else:
+                    img = img  
+
+
         return img, (h0, w0), img.shape[:2]  # img, hw_original, hw_resized
     else:
         return self.imgs[index], self.img_hw0[index], self.img_hw[index]  # img, hw_original, hw_resized
@@ -950,8 +1009,14 @@ def augment_hsv(img, hgain=0.5, sgain=0.5, vgain=0.5):
     lut_val = np.clip(x * r[2], 0, 255).astype(dtype)
 
     img_hsv = cv2.merge((cv2.LUT(hue, lut_hue), cv2.LUT(sat, lut_sat), cv2.LUT(val, lut_val))).astype(dtype)
+    #기존 코드
     cv2.cvtColor(img_hsv, cv2.COLOR_HSV2BGR, dst=img)  # no return needed
-
+    #cv2.cvtColor(img_hsv, cv2.COLOR_HSV2BGR, dst=img)
+    #cnt = 0
+    #cv2.cvtColor(img_hsv, cv2.COLOR_BGR2GRAY, dst=img)
+    #cv2.imwrite('/opt/ml/yolor_d6/runs/train/grayscale3/' + str(cnt).zfill(4) + '.jpg', img_hsv)
+    #cnt += 1
+    
     # Histogram equalization
     # if random.random() < 0.2:
     #     for i in range(3):
@@ -1118,6 +1183,7 @@ def letterbox(img, new_shape=(640, 640), color=(114, 114, 114), auto=True, scale
     if not scaleup:  # only scale down, do not scale up (for better test mAP)
         r = min(r, 1.0)
 
+
     # Compute padding
     ratio = r, r  # width, height ratios
     new_unpad = int(round(shape[1] * r)), int(round(shape[0] * r))
@@ -1159,10 +1225,17 @@ def random_perspective(img, targets=(), degrees=10, translate=.1, scale=.1, shea
 
     # Rotation and Scale
     R = np.eye(3)
+
     a = random.uniform(-degrees, degrees)
-    # a += random.choice([-180, -90, 0, 90])  # add 90deg rotations to small rotations
-    s = random.uniform(1 - scale, 1 + scale)
-    # s = 2 ** random.uniform(-scale, scale)
+    #a += random.choice([-180,-90,0,90])
+    #s = random.uniform(1, 1 + scale)
+    s = random.uniform(1.0-scale, 0.8)
+
+    # 기존 코드
+    # a = random.uniform(-degrees, degrees)
+    # # a += random.choice([-180, -90, 0, 90])  # add 90deg rotations to small rotations
+    # s = random.uniform(1 - scale, 1 + scale)
+    # # s = 2 ** random.uniform(-scale, scale)
     R[:2] = cv2.getRotationMatrix2D(angle=a, center=(0, 0), scale=s)
 
     # Shear
@@ -1295,7 +1368,30 @@ def flatten_recursive(path='../coco128'):
     for file in tqdm(glob.glob(str(Path(path)) + '/**/*.*', recursive=True)):
         shutil.copyfile(file, new_path / Path(file).name)
 
-
 def rgb2gray(image):
     image = np.dot(image[...,:3], [0.2989, 0.5870, 0.1140]).astype(np.uint8)
     return np.repeat(image[..., np.newaxis], 3, axis=-1)
+
+
+def imgaug_rain(image):
+    imgaug_img = image[np.newaxis, :, :, :]
+    seq = iaa.Sequential([
+        iaa.Emboss(alpha=(0.5,1.0), strength=(0.5,1.5)),
+        iaa.Rain(drop_size=(0.2,0.4)),
+        iaa.Dropout(p=(0,0.2))
+    ])
+    aug_img = seq(images=imgaug_img)
+    res = np.hstack((aug_img))
+    return res
+
+def imgaug_snow(image):
+    imgaug_img = image[np.newaxis, :, :, :]
+    seq = iaa.Sequential([
+        iaa.Emboss(alpha=(0.5,1.0), strength=(0.5,1.5)),
+        iaa.Snowflakes(flake_size=(0.3,0.9), speed=(0.0001, 0.0004)),
+        iaa.Dropout(p=(0,0.2))
+    ])
+    aug_img = seq(images=imgaug_img)
+    res = np.hstack((aug_img))
+    return res
+
