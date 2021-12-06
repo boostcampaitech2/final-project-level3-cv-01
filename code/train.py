@@ -356,23 +356,18 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
             if ema:
                 ema.update_attr(model, include=['yaml', 'nc', 'hyp', 'gr', 'names', 'stride'])
             final_epoch = epoch + 1 == epochs
-            # if epoch == 6:
-            #     import pdb
-            #     pdb.set_trace()
-            # ----------- 추가 코드 --------------
-            # 마지막 에포크에서 CUDA tensor to numpy error 떠서 마지막은 안하도록 수정
-            if not epoch == epochs-1:
-                if not opt.notest or final_epoch:  # Calculate mAP
-                    if epoch >= 3:
-                        results, maps, times = test.test(opt.data,
-                                                    batch_size=batch_size*2,
-                                                    imgsz=imgsz_test,
-                                                    model=ema.ema,
-                                                    single_cls=opt.single_cls,
-                                                    dataloader=testloader,
-                                                    save_dir=save_dir,
-                                                    plots=plots and final_epoch,
-                                                    log_imgs=opt.log_imgs if wandb else 0)
+
+            if not opt.notest or final_epoch:  # Calculate mAP
+                if epoch >= 3:
+                    results, maps, times = test.test(opt.data,
+                                                batch_size=batch_size*2,
+                                                imgsz=imgsz_test,
+                                                model=ema.ema,
+                                                single_cls=opt.single_cls,
+                                                dataloader=testloader,
+                                                save_dir=save_dir,
+                                                plots=plots and final_epoch,
+                                                log_imgs=opt.log_imgs if wandb else 0)
 
             # Write
             with open(results_file, 'a') as f:
