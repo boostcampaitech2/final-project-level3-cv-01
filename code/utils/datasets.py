@@ -972,6 +972,8 @@ def load_image(self, index, hyp):
                     img = imgaug_rain(img)
                 elif random.random() < hyp['snow']:
                     img = imgaug_snow(img)
+                elif random.random() < hyp['color']:
+                    img = imgaug_color(img)
                 else:
                     img = img  
 
@@ -1382,3 +1384,23 @@ def imgaug_snow(image):
     res = np.hstack((aug_img))
     return res
 
+def imgaug_color(image):
+    imgaug_img = image[np.newaxis, :, :, :]
+    seq = iaa.OneOf([
+        iaa.WithBrightnessChannels(iaa.Add((-50, 50))),
+        iaa.MultiplyHueAndSaturation(mul_hue=(0.5, 1.5)),
+        iaa.RemoveSaturation(),
+        iaa.AddToHueAndSaturation((-50, 50), per_channel=True),
+        iaa.Sequential([
+            iaa.ChangeColorspace(from_colorspace="RGB", to_colorspace="HSV"),
+            iaa.WithChannels(0, iaa.Add((50, 100))),
+            iaa.ChangeColorspace(from_colorspace="HSV", to_colorspace="RGB")
+        ]),
+        iaa.ChangeColorTemperature((1100, 10000)),
+        iaa.KMeansColorQuantization(n_colors=(4, 8)),
+        iaa.UniformColorQuantization(n_colors=(4, 8)),
+        iaa.UniformColorQuantizationToNBits(nb_bits=(2, 8))
+    ])
+    aug_img = seq(images=imgaug_img)
+    res = np.hstack((aug_img))
+    return res
