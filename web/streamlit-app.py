@@ -36,14 +36,6 @@ def trigger_rerun():
     # this_session.request_rerun()
     st.experimental_rerun()
 
-def load_yolo_model(pt_file, device):
-    """
-    wrapper func to load and cache object detector 
-    """
-    obj_detector = attempt_load(pt_file, map_location=device)
-
-    return obj_detector
-
 def DetermineBoxCenter(box):
     cx = int(box[0] + (box[2]/2))
     cy = int(box[1] + (box[3]/2))
@@ -67,7 +59,6 @@ def drawBoxes(frame, pred, thres = 0.9): # thres 조절 추가 예정
     }
     TextColor = (255, 255, 255) # white
     boxThickness = 3 
-    textThickness = 2
 
     for x1, y1, x2, y2, conf, lbl in pred:
         if conf < thres:
@@ -75,13 +66,10 @@ def drawBoxes(frame, pred, thres = 0.9): # thres 조절 추가 예정
         lbl = int(lbl)
         if lbl not in [0,1,2,3]:
             continue
-        x1, y1, x2, y2, conf = int(x1), int(y1), int(x2), int(y2), float(conf) # tensor to float
+        x1, y1, x2, y2, conf = int(x1), int(y1), int(x2), int(y2), float(conf) # tensor to int or float
         start_coord = (x1, y1)
-        # w, h = box[2:]
-        # end_coord = start_coord[0] + w, start_coord[1] + h
         end_coord = (x2, y2)
-        cx, cy = int(x1 + x2/2), int(y1 + y2/2) # 박스중심좌표
-    # text to be included to the output image
+        # text to be included to the output image
         txt = f'{className[lbl]} ({round(conf, 3)})'
         frame = cv2.rectangle(frame, start_coord, end_coord, boxColor[lbl], boxThickness)
         frame = cv2.putText(frame, txt, start_coord, cv2.FONT_HERSHEY_SIMPLEX, 0.5, TextColor, 2)
@@ -90,7 +78,7 @@ def drawBoxes(frame, pred, thres = 0.9): # thres 조절 추가 예정
 
 
 def main():
-    st.set_page_config(page_title = "킥보드 부정이용 탐지기", 
+    st.set_page_config(page_title = "안전모 미착용, 승차인원 초과 멈춰~!", 
     page_icon=":scooter:")
 
     state = SessionState.get(upload_key = None, enabled = True, start = False, conf = 70, nms = 50, run = False)
@@ -99,7 +87,7 @@ def main():
     start_button = st.empty()
     stop_button = st.empty()
 
-    model = load_yolo_model('yolor-d6.pt', device).eval()
+    model = attempt_load('yolor-d6.pt', map_location=device)
 
 
     with upload:
@@ -130,10 +118,10 @@ def main():
                 state.run = True
                 trigger_rerun()
 
-    ######## TEST MODE #######
-    vf = cv2.VideoCapture('/opt/ml/video/GOPR1296.MP4')
-    ProcessFrames(vf, model, stop_button)
-    ######## TEST MODE #######
+    # ######## TEST MODE #######
+    # vf = cv2.VideoCapture('/opt/ml/video/GOPR1296.MP4')
+    # ProcessFrames(vf, model, stop_button)
+    # ######## TEST MODE #######
 
 def ProcessFrames(vf, obj_detector, stop): 
     """
@@ -156,11 +144,10 @@ def ProcessFrames(vf, obj_detector, stop):
     # new_car_count_txt = st.empty()
     fps_meas_txt = st.empty()
     bar = st.progress(frame_counter)
-    stframe = st.empty()
     start = time.time()
     fourcc = "mp4v"  # output video codec
     vid_writer = cv2.VideoWriter(
-                            "/opt/ml/video/result.mp4", cv2.VideoWriter_fourcc(*fourcc), fps, (1280, 960)
+                            "result.mp4", cv2.VideoWriter_fourcc(*fourcc), fps, (1280, 960)
                         ) # Warning: 마지막 파라미터(이미지 크기 예:(1280, 960))가 안 맞으면 동영상이 저장이 안 됨!
 
     while vf.isOpened():
@@ -198,7 +185,7 @@ def ProcessFrames(vf, obj_detector, stop):
         
     print('finish!')
     # 서버에 저장된 동영상 파일을 불러와 페이지에 띄우는 부분
-    video_file = open("/opt/ml/video/result.mp4", 'rb')
+    video_file = open("result.mp4", 'rb')
     video_bytes = video_file.read()
     st.video(video_bytes)
 main()
