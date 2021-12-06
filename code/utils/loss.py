@@ -5,6 +5,7 @@ import torch.nn as nn
 
 from utils.general import bbox_iou, wh_iou
 from utils.torch_utils import is_parallel
+import numpy as np
 
 
 def smooth_BCE(eps=0.1):  # https://github.com/ultralytics/yolov3/issues/238#issuecomment-598028441
@@ -31,16 +32,18 @@ class BCEBlurWithLogitsLoss(nn.Module):
 
 class FocalLoss(nn.Module):
     # Wraps focal loss around existing loss_fcn(), i.e. criteria = FocalLoss(nn.BCEWithLogitsLoss(), gamma=1.5)
-    def __init__(self, loss_fcn, gamma=1.5, alpha=0.25):
+    def __init__(self, loss_fcn, device, gamma=1.5, alpha=0.25):
         super(FocalLoss, self).__init__()
         self.loss_fcn = loss_fcn  # must be nn.BCEWithLogitsLoss()
         self.gamma = gamma
-        self.alpha = alpha
+        self.device = device
+        self.alpha = torch.tensor(alpha, device = self.device, requires_grad=False)
         self.reduction = loss_fcn.reduction
         self.loss_fcn.reduction = 'none'  # required to apply FL to each element
 
     def forward(self, pred, true):
         loss = self.loss_fcn(pred, true)
+        # import pdb; pdb.set_trace()
         # p_t = torch.exp(-loss)
         # loss *= self.alpha * (1.000001 - p_t) ** self.gamma  # non-zero power for gradient stability
 
@@ -76,7 +79,7 @@ def compute_loss(p, targets, model):  # predictions, targets, model
     # Focal loss
     g = h['fl_gamma']  # focal loss gamma
     if g > 0:
-        BCEcls, BCEobj = FocalLoss(BCEcls, g), FocalLoss(BCEobj, g)
+        BCEcls, BCEobj = FocalLoss(BCEcls, device, g, [0.03, 0.025, 0.83, 0.115]), FocalLoss(BCEobj, device, g)
 
     # Losses
     nt = 0  # number of targets
