@@ -1,3 +1,4 @@
+import argparse
 import socket
 
 from server_thread import ServerThread
@@ -26,9 +27,21 @@ class Server:
             
             return
 
+def parse_args():
+    parser = argparse.ArgumentParser(description='Run Socket Server')
+    parser.add_argument(
+        "--ip", default='172.17.0.3', type=str, help="upstage server ip"
+    )    
+    parser.add_argument(
+        "--port", default='6006', type=int, help="upstage server port"
+    )
+    args = parser.parse_args()
+    return args
 
 def main() -> None:
-    server = Server(('172.17.0.3', 6006))
+    args = parse_args()
+    address = (args.ip, args.port)
+    server = Server(address)
     server.start()
 
 if __name__ == "__main__":
