@@ -10,6 +10,7 @@ from itertools import repeat
 from multiprocessing.pool import ThreadPool
 from pathlib import Path
 from threading import Thread
+from typing import Sequence
 
 import cv2
 import numpy as np
@@ -26,6 +27,13 @@ from torchvision.ops import roi_pool, roi_align, ps_roi_pool, ps_roi_align
 
 from utils.general import xyxy2xywh, xywh2xyxy
 from utils.torch_utils import torch_distributed_zero_first
+
+import imgaug as ia
+import imgaug.augmenters as iaa
+
+import yaml
+
+
 
 # Parameters
 help_url = 'https://github.com/ultralytics/yolov5/wiki/Train-Custom-Data'
@@ -504,7 +512,7 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
         if cache_images:
             gb = 0  # Gigabytes of cached images
             self.img_hw0, self.img_hw = [None] * n, [None] * n
-            results = ThreadPool(8).imap(lambda x: load_image(*x), zip(repeat(self), range(n)))  # 8 threads
+            results = ThreadPool(8).imap(lambda x: load_image(*x), zip(repeat(self), range(n), [hyp]*n))  # 8 threads
             pbar = tqdm(enumerate(results), total=n)
             for i, x in pbar:
                 self.imgs[i], self.img_hw0[i], self.img_hw[i] = x  # img, hw_original, hw_resized = load_image(self, i)
@@ -552,21 +560,21 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
         mosaic = self.mosaic and random.random() < hyp['mosaic']
         if mosaic:
             # Load mosaic
-            img, labels = load_mosaic(self, index)
-            #img, labels = load_mosaic9(self, index)
+            img, labels = load_mosaic(self, index, hyp)
+            #img, labels = load_mosaic9(self, index, hyp)
             shapes = None
 
             # MixUp https://arxiv.org/pdf/1710.09412.pdf
             if random.random() < hyp['mixup']:
-                img2, labels2 = load_mosaic(self, random.randint(0, len(self.labels) - 1))
-                #img2, labels2 = load_mosaic9(self, random.randint(0, len(self.labels) - 1))
+                img2, labels2 = load_mosaic(self, random.randint(0, len(self.labels) - 1), hyp)
+                #img2, labels2 = load_mosaic9(self, random.randint(0, len(self.labels) - 1), hyp)
                 r = np.random.beta(8.0, 8.0)  # mixup ratio, alpha=beta=8.0
                 img = (img * r + img2 * (1 - r)).astype(np.uint8)
                 labels = np.concatenate((labels, labels2), 0)
 
         else:
             # Load image
-            img, (h0, w0), (h, w) = load_image(self, index)
+            img, (h0, w0), (h, w) = load_image(self, index, hyp)
 
             # Letterbox
             shape = self.batch_shapes[self.batch[index]] if self.rect else self.img_size  # final letterboxed shape
@@ -600,6 +608,12 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
             # Apply cutouts
             # if random.random() < 0.9:
             #     labels = cutout(img, labels)
+
+        # 이 부분에서 적용하시면 모자이크를 했을 때, 모자이크 전체에 적용이 됩니다.
+        #if random.random() < hyp['grayscale']:
+        #    img = rgb2gray(img)
+
+
 
         nL = len(labels)  # number of labels
         if nL:
@@ -787,7 +801,7 @@ class LoadImagesAndLabels9(Dataset):  # for training/testing
         if cache_images:
             gb = 0  # Gigabytes of cached images
             self.img_hw0, self.img_hw = [None] * n, [None] * n
-            results = ThreadPool(8).imap(lambda x: load_image(*x), zip(repeat(self), range(n)))  # 8 threads
+            results = ThreadPool(8).imap(lambda x: load_image(*x), zip(repeat(self), range(n), [hyp]*n))  # 8 threads
             pbar = tqdm(enumerate(results), total=n)
             for i, x in pbar:
                 self.imgs[i], self.img_hw0[i], self.img_hw[i] = x  # img, hw_original, hw_resized = load_image(self, i)
@@ -835,21 +849,21 @@ class LoadImagesAndLabels9(Dataset):  # for training/testing
         mosaic = self.mosaic and random.random() < hyp['mosaic']
         if mosaic:
             # Load mosaic
-            #img, labels = load_mosaic(self, index)
-            img, labels = load_mosaic9(self, index)
+            #img, labels = load_mosaic(self, index, hyp)
+            img, labels = load_mosaic9(self, index, hyp)
             shapes = None
 
             # MixUp https://arxiv.org/pdf/1710.09412.pdf
             if random.random() < hyp['mixup']:
-                #img2, labels2 = load_mosaic(self, random.randint(0, len(self.labels) - 1))
-                img2, labels2 = load_mosaic9(self, random.randint(0, len(self.labels) - 1))
+                #img2, labels2 = load_mosaic(self, random.randint(0, len(self.labels) - 1), hyp)
+                img2, labels2 = load_mosaic9(self, random.randint(0, len(self.labels) - 1), hyp)
                 r = np.random.beta(8.0, 8.0)  # mixup ratio, alpha=beta=8.0
                 img = (img * r + img2 * (1 - r)).astype(np.uint8)
                 labels = np.concatenate((labels, labels2), 0)
 
         else:
             # Load image
-            img, (h0, w0), (h, w) = load_image(self, index)
+            img, (h0, w0), (h, w) = load_image(self, index, hyp)
 
             # Letterbox
             shape = self.batch_shapes[self.batch[index]] if self.rect else self.img_size  # final letterboxed shape
@@ -883,6 +897,11 @@ class LoadImagesAndLabels9(Dataset):  # for training/testing
             # Apply cutouts
             # if random.random() < 0.9:
             #     labels = cutout(img, labels)
+
+        # 여기 모자이크9, 이 부분에서 적용하시면 모자이크 된 이미지에 모두 처리가 됩니다.
+        # if random.random() < hyp['grayscale']:
+        #     img = rgb2gray(img)
+
 
         nL = len(labels)  # number of labels
         if nL:
@@ -922,9 +941,18 @@ class LoadImagesAndLabels9(Dataset):  # for training/testing
 
 
 # Ancillary functions --------------------------------------------------------------------------------------------------
-def load_image(self, index):
+def load_image(self, index, hyp):
     # loads 1 image from dataset, returns img, original hw, resized hw
     img = self.imgs[index]
+
+
+
+    # # 모자이크에서 하는게 아닌 각 이미지마다 augmentation 적용
+    # # hyp 불러오기
+    # with open('/opt/ml/yolor_d6/data/hyp.scratch.1280.yaml') as f:
+    #     hyp = yaml.load(f, Loader=yaml.FullLoader)  # load hyps
+
+
     if img is None:  # not cached
         path = self.img_files[index]
         img = cv2.imread(path)  # BGR
@@ -934,6 +962,20 @@ def load_image(self, index):
         if r != 1:  # always resize down, only resize up if training with augmentation
             interp = cv2.INTER_AREA if r < 1 and not self.augment else cv2.INTER_LINEAR
             img = cv2.resize(img, (int(w0 * r), int(h0 * r)), interpolation=interp)
+
+            # 이 부분에서 처리 하시면 각각의 이미지에 처리가 됩니다.
+            if random.random() < hyp['grayscale']:
+                img = rgb2gray(img)
+
+            if random.random() < hyp['imgaug']:
+                if random.random() < hyp['rain']:
+                    img = imgaug_rain(img)
+                elif random.random() < hyp['snow']:
+                    img = imgaug_snow(img)
+                else:
+                    img = img  
+
+
         return img, (h0, w0), img.shape[:2]  # img, hw_original, hw_resized
     else:
         return self.imgs[index], self.img_hw0[index], self.img_hw[index]  # img, hw_original, hw_resized
@@ -950,15 +992,21 @@ def augment_hsv(img, hgain=0.5, sgain=0.5, vgain=0.5):
     lut_val = np.clip(x * r[2], 0, 255).astype(dtype)
 
     img_hsv = cv2.merge((cv2.LUT(hue, lut_hue), cv2.LUT(sat, lut_sat), cv2.LUT(val, lut_val))).astype(dtype)
+    #기존 코드
     cv2.cvtColor(img_hsv, cv2.COLOR_HSV2BGR, dst=img)  # no return needed
-
+    #cv2.cvtColor(img_hsv, cv2.COLOR_HSV2BGR, dst=img)
+    #cnt = 0
+    #cv2.cvtColor(img_hsv, cv2.COLOR_BGR2GRAY, dst=img)
+    #cv2.imwrite('/opt/ml/yolor_d6/runs/train/grayscale3/' + str(cnt).zfill(4) + '.jpg', img_hsv)
+    #cnt += 1
+    
     # Histogram equalization
     # if random.random() < 0.2:
     #     for i in range(3):
     #         img[:, :, i] = cv2.equalizeHist(img[:, :, i])
 
 
-def load_mosaic(self, index):
+def load_mosaic(self, index, hyp):
     # loads images in a mosaic
 
     labels4 = []
@@ -967,7 +1015,7 @@ def load_mosaic(self, index):
     indices = [index] + [random.randint(0, len(self.labels) - 1) for _ in range(3)]  # 3 additional image indices
     for i, index in enumerate(indices):
         # Load image
-        img, _, (h, w) = load_image(self, index)
+        img, _, (h, w) = load_image(self, index, hyp)
 
         # place img in img4
         if i == 0:  # top left
@@ -1016,7 +1064,7 @@ def load_mosaic(self, index):
     return img4, labels4
 
 
-def load_mosaic9(self, index):
+def load_mosaic9(self, index, hyp):
     # loads images in a 9-mosaic
 
     labels9 = []
@@ -1024,7 +1072,7 @@ def load_mosaic9(self, index):
     indices = [index] + [random.randint(0, len(self.labels) - 1) for _ in range(8)]  # 8 additional image indices
     for i, index in enumerate(indices):
         # Load image
-        img, _, (h, w) = load_image(self, index)
+        img, _, (h, w) = load_image(self, index, hyp)
 
         # place img in img9
         if i == 0:  # center
@@ -1118,6 +1166,7 @@ def letterbox(img, new_shape=(640, 640), color=(114, 114, 114), auto=True, scale
     if not scaleup:  # only scale down, do not scale up (for better test mAP)
         r = min(r, 1.0)
 
+
     # Compute padding
     ratio = r, r  # width, height ratios
     new_unpad = int(round(shape[1] * r)), int(round(shape[0] * r))
@@ -1159,10 +1208,21 @@ def random_perspective(img, targets=(), degrees=10, translate=.1, scale=.1, shea
 
     # Rotation and Scale
     R = np.eye(3)
+
+    # 로테이트 처리 하는 곳 입니다.
     a = random.uniform(-degrees, degrees)
-    # a += random.choice([-180, -90, 0, 90])  # add 90deg rotations to small rotations
-    s = random.uniform(1 - scale, 1 + scale)
-    # s = 2 ** random.uniform(-scale, scale)
+
+    #a += random.choice([-180,-90,0,90])
+    #s = random.uniform(1, 1 + scale)
+
+    # 스케일 크기 처리 하는 곳 입니다.
+    s = random.uniform(1.0-scale, 0.8)
+
+    # 기존 코드
+    # a = random.uniform(-degrees, degrees)
+    # # a += random.choice([-180, -90, 0, 90])  # add 90deg rotations to small rotations
+    # s = random.uniform(1 - scale, 1 + scale)
+    # # s = 2 ** random.uniform(-scale, scale)
     R[:2] = cv2.getRotationMatrix2D(angle=a, center=(0, 0), scale=s)
 
     # Shear
@@ -1295,7 +1355,30 @@ def flatten_recursive(path='../coco128'):
     for file in tqdm(glob.glob(str(Path(path)) + '/**/*.*', recursive=True)):
         shutil.copyfile(file, new_path / Path(file).name)
 
-
 def rgb2gray(image):
     image = np.dot(image[...,:3], [0.2989, 0.5870, 0.1140]).astype(np.uint8)
     return np.repeat(image[..., np.newaxis], 3, axis=-1)
+
+
+def imgaug_rain(image):
+    imgaug_img = image[np.newaxis, :, :, :]
+    seq = iaa.Sequential([
+        iaa.Emboss(alpha=(0.5,1.0), strength=(0.5,1.5)),
+        iaa.Rain(drop_size=(0.2,0.4)),
+        iaa.Dropout(p=(0,0.2))
+    ])
+    aug_img = seq(images=imgaug_img)
+    res = np.hstack((aug_img))
+    return res
+
+def imgaug_snow(image):
+    imgaug_img = image[np.newaxis, :, :, :]
+    seq = iaa.Sequential([
+        iaa.Emboss(alpha=(0.5,1.0), strength=(0.5,1.5)),
+        iaa.Snowflakes(flake_size=(0.3,0.9), speed=(0.0001, 0.0004)),
+        iaa.Dropout(p=(0,0.2))
+    ])
+    aug_img = seq(images=imgaug_img)
+    res = np.hstack((aug_img))
+    return res
+

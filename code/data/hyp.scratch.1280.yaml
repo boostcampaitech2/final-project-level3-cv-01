@@ -26,3 +26,7 @@ flipud: 0.0  # image flip up-down (probability)
 fliplr: 0.5  # image flip left-right (probability)
 mosaic: 1.0  # image mosaic (probability)
 mixup: 0.0  # image mixup (probability)
+grayscale: 0.3 # grayscale 
+imgaug: 0.5
+rain: 0.4
+snow: 0.3
