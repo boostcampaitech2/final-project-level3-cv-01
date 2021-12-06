@@ -512,7 +512,7 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
         if cache_images:
             gb = 0  # Gigabytes of cached images
             self.img_hw0, self.img_hw = [None] * n, [None] * n
-            results = ThreadPool(8).imap(lambda x: load_image(*x), zip(repeat(self), range(n)))  # 8 threads
+            results = ThreadPool(8).imap(lambda x: load_image(*x), zip(repeat(self), range(n), [hyp]*n))  # 8 threads
             pbar = tqdm(enumerate(results), total=n)
             for i, x in pbar:
                 self.imgs[i], self.img_hw0[i], self.img_hw[i] = x  # img, hw_original, hw_resized = load_image(self, i)
@@ -560,21 +560,21 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
         mosaic = self.mosaic and random.random() < hyp['mosaic']
         if mosaic:
             # Load mosaic
-            img, labels = load_mosaic(self, index)
-            #img, labels = load_mosaic9(self, index)
+            img, labels = load_mosaic(self, index, hyp)
+            #img, labels = load_mosaic9(self, index, hyp)
             shapes = None
 
             # MixUp https://arxiv.org/pdf/1710.09412.pdf
             if random.random() < hyp['mixup']:
-                img2, labels2 = load_mosaic(self, random.randint(0, len(self.labels) - 1))
-                #img2, labels2 = load_mosaic9(self, random.randint(0, len(self.labels) - 1))
+                img2, labels2 = load_mosaic(self, random.randint(0, len(self.labels) - 1), hyp)
+                #img2, labels2 = load_mosaic9(self, random.randint(0, len(self.labels) - 1), hyp)
                 r = np.random.beta(8.0, 8.0)  # mixup ratio, alpha=beta=8.0
                 img = (img * r + img2 * (1 - r)).astype(np.uint8)
                 labels = np.concatenate((labels, labels2), 0)
 
         else:
             # Load image
-            img, (h0, w0), (h, w) = load_image(self, index)
+            img, (h0, w0), (h, w) = load_image(self, index, hyp)
 
             # Letterbox
             shape = self.batch_shapes[self.batch[index]] if self.rect else self.img_size  # final letterboxed shape
@@ -801,7 +801,7 @@ class LoadImagesAndLabels9(Dataset):  # for training/testing
         if cache_images:
             gb = 0  # Gigabytes of cached images
             self.img_hw0, self.img_hw = [None] * n, [None] * n
-            results = ThreadPool(8).imap(lambda x: load_image(*x), zip(repeat(self), range(n)))  # 8 threads
+            results = ThreadPool(8).imap(lambda x: load_image(*x), zip(repeat(self), range(n), [hyp]*n))  # 8 threads
             pbar = tqdm(enumerate(results), total=n)
             for i, x in pbar:
                 self.imgs[i], self.img_hw0[i], self.img_hw[i] = x  # img, hw_original, hw_resized = load_image(self, i)
@@ -849,21 +849,21 @@ class LoadImagesAndLabels9(Dataset):  # for training/testing
         mosaic = self.mosaic and random.random() < hyp['mosaic']
         if mosaic:
             # Load mosaic
-            #img, labels = load_mosaic(self, index)
-            img, labels = load_mosaic9(self, index)
+            #img, labels = load_mosaic(self, index, hyp)
+            img, labels = load_mosaic9(self, index, hyp)
             shapes = None
 
             # MixUp https://arxiv.org/pdf/1710.09412.pdf
             if random.random() < hyp['mixup']:
-                #img2, labels2 = load_mosaic(self, random.randint(0, len(self.labels) - 1))
-                img2, labels2 = load_mosaic9(self, random.randint(0, len(self.labels) - 1))
+                #img2, labels2 = load_mosaic(self, random.randint(0, len(self.labels) - 1), hyp)
+                img2, labels2 = load_mosaic9(self, random.randint(0, len(self.labels) - 1), hyp)
                 r = np.random.beta(8.0, 8.0)  # mixup ratio, alpha=beta=8.0
                 img = (img * r + img2 * (1 - r)).astype(np.uint8)
                 labels = np.concatenate((labels, labels2), 0)
 
         else:
             # Load image
-            img, (h0, w0), (h, w) = load_image(self, index)
+            img, (h0, w0), (h, w) = load_image(self, index, hyp)
 
             # Letterbox
             shape = self.batch_shapes[self.batch[index]] if self.rect else self.img_size  # final letterboxed shape
@@ -941,16 +941,16 @@ class LoadImagesAndLabels9(Dataset):  # for training/testing
 
 
 # Ancillary functions --------------------------------------------------------------------------------------------------
-def load_image(self, index):
+def load_image(self, index, hyp):
     # loads 1 image from dataset, returns img, original hw, resized hw
     img = self.imgs[index]
 
 
 
-    # 모자이크에서 하는게 아닌 각 이미지마다 augmentation 적용
-    # hyp 불러오기
-    with open('/opt/ml/yolor_d6/data/hyp.scratch.1280.yaml') as f:
-        hyp = yaml.load(f, Loader=yaml.FullLoader)  # load hyps
+    # # 모자이크에서 하는게 아닌 각 이미지마다 augmentation 적용
+    # # hyp 불러오기
+    # with open('/opt/ml/yolor_d6/data/hyp.scratch.1280.yaml') as f:
+    #     hyp = yaml.load(f, Loader=yaml.FullLoader)  # load hyps
 
 
     if img is None:  # not cached
@@ -1006,7 +1006,7 @@ def augment_hsv(img, hgain=0.5, sgain=0.5, vgain=0.5):
     #         img[:, :, i] = cv2.equalizeHist(img[:, :, i])
 
 
-def load_mosaic(self, index):
+def load_mosaic(self, index, hyp):
     # loads images in a mosaic
 
     labels4 = []
@@ -1015,7 +1015,7 @@ def load_mosaic(self, index):
     indices = [index] + [random.randint(0, len(self.labels) - 1) for _ in range(3)]  # 3 additional image indices
     for i, index in enumerate(indices):
         # Load image
-        img, _, (h, w) = load_image(self, index)
+        img, _, (h, w) = load_image(self, index, hyp)
 
         # place img in img4
         if i == 0:  # top left
@@ -1064,7 +1064,7 @@ def load_mosaic(self, index):
     return img4, labels4
 
 
-def load_mosaic9(self, index):
+def load_mosaic9(self, index, hyp):
     # loads images in a 9-mosaic
 
     labels9 = []
@@ -1072,7 +1072,7 @@ def load_mosaic9(self, index):
     indices = [index] + [random.randint(0, len(self.labels) - 1) for _ in range(8)]  # 8 additional image indices
     for i, index in enumerate(indices):
         # Load image
-        img, _, (h, w) = load_image(self, index)
+        img, _, (h, w) = load_image(self, index, hyp)
 
         # place img in img9
         if i == 0:  # center
