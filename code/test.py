@@ -18,6 +18,7 @@ from utils.metrics import ap_per_class
 from utils.plots import plot_images, output_to_target
 from utils.torch_utils import select_device, time_synchronized
 
+import wandb
 
 def test(data,
          weights=None,
@@ -80,6 +81,8 @@ def test(data,
         import wandb  # Weights & Biases
     except ImportError:
         log_imgs = 0
+
+    
 
     # Dataloader
     if not training:
@@ -220,8 +223,17 @@ def test(data,
     else:
         nt = torch.zeros(1)
 
+
+    # wandb project, entity 설정 해주세요!!!
+    if not training:
+        wandb_run = wandb.init(config=opt, resume="allow",
+                            project='final_yolor' if opt.project == 'runs/test' else Path(opt.project).stem,
+                            entity='kkami',
+                            name=save_dir.stem)
+
     # W&B logging
     if plots and wandb:
+        print('---')
         wandb.log({"Images": wandb_images})
         wandb.log({"Validation": [wandb.Image(str(x), caption=x.name) for x in sorted(save_dir.glob('test*.jpg'))]})
 
