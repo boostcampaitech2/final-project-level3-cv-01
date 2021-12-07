@@ -1,0 +1,10 @@
+# train and val datasets (image directory or *.txt file with image paths)
+train: /opt/ml/final_project/data/train/images
+val: /opt/ml/final_project/data/val/images
+test: /opt/ml/final_project/data/test/images
+
+# number of classes
+nc: 2
+
+# class names
+names: ['H', '~H']

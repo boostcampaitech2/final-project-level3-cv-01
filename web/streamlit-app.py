@@ -119,7 +119,7 @@ def main():
                 trigger_rerun()
 
     # ######## TEST MODE #######
-    # vf = cv2.VideoCapture('/opt/ml/video/GOPR1296.MP4')
+    # vf = cv2.VideoCapture('/opt/ml/video/GOPR1300.MP4')
     # ProcessFrames(vf, model, stop_button)
     # ######## TEST MODE #######
 
@@ -145,9 +145,9 @@ def ProcessFrames(vf, obj_detector, stop):
     fps_meas_txt = st.empty()
     bar = st.progress(frame_counter)
     start = time.time()
-    fourcc = "mp4v"  # output video codec
-    vid_writer = cv2.VideoWriter(
-                            "result.mp4", cv2.VideoWriter_fourcc(*fourcc), fps, (1280, 960)
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v') # output video codec
+    video_writer = cv2.VideoWriter(
+                            "result.mp4", fourcc, fps, (1280, 960)
                         ) # Warning: 마지막 파라미터(이미지 크기 예:(1280, 960))가 안 맞으면 동영상이 저장이 안 됨!
 
     while vf.isOpened():
@@ -181,11 +181,13 @@ def ProcessFrames(vf, obj_detector, stop):
         fps_measurement = frame_counter/(end - start)
         fps_meas_txt.markdown(f'**Frames per second:** {fps_measurement:.2f}')
         bar.progress(frame_counter/num_frames)        
-        vid_writer.write(frame)
-        
+        video_writer.write(frame)
+
+    video_writer.release()    
     print('finish!')
+    os.system("ffmpeg -i result.mp4 -vcodec libx264 result_h264.mp4")
     # 서버에 저장된 동영상 파일을 불러와 페이지에 띄우는 부분
-    video_file = open("result.mp4", 'rb')
+    video_file = open("result_h264.mp4", 'rb')
     video_bytes = video_file.read()
     st.video(video_bytes)
 main()
