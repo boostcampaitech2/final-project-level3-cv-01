@@ -2,6 +2,7 @@
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from utils.general import bbox_iou, wh_iou
 from utils.torch_utils import is_parallel
@@ -32,12 +33,11 @@ class BCEBlurWithLogitsLoss(nn.Module):
 
 class FocalLoss(nn.Module):
     # Wraps focal loss around existing loss_fcn(), i.e. criteria = FocalLoss(nn.BCEWithLogitsLoss(), gamma=1.5)
-    def __init__(self, loss_fcn, device, gamma=1.5, alpha=0.25):
+    def __init__(self, loss_fcn, gamma=1.5, alpha=0.25): 
         super(FocalLoss, self).__init__()
         self.loss_fcn = loss_fcn  # must be nn.BCEWithLogitsLoss()
         self.gamma = gamma
-        self.device = device
-        self.alpha = torch.tensor(alpha, device = self.device, requires_grad=False)
+        self.alpha = alpha
         self.reduction = loss_fcn.reduction
         self.loss_fcn.reduction = 'none'  # required to apply FL to each element
 
@@ -55,11 +55,100 @@ class FocalLoss(nn.Module):
         loss *= alpha_factor * modulating_factor
 
         if self.reduction == 'mean':
+            # import pdb;pdb.set_trace()
             return loss.mean()
         elif self.reduction == 'sum':
+            # import pdb;pdb.set_trace()
             return loss.sum()
         else:  # 'none'
+            # import pdb;pdb.set_trace()
             return loss
+
+class FocalLoss_Test(nn.Module):
+
+    def __init__(self,
+                 alpha= None,
+                 gamma = 2.0,
+                 reduction: str = 'mean',
+                 ignore_index: int = -100,
+                 loss_weight=1.0,
+                 loss_name = 'loss_focal'):
+        """Constructor.
+        Args:
+            alpha (Tensor, optional): Weights for each class. Defaults to None.
+            gamma (float, optional): A constant, as described in the paper.
+                Defaults to 0.
+            reduction (str, optional): 'mean', 'sum' or 'none'.
+                Defaults to 'mean'.
+            ignore_index (int, optional): class label to ignore.
+                Defaults to -100.
+        """
+        if reduction not in ('mean', 'sum', 'none'):
+            raise ValueError(
+                'Reduction must be one of: "mean", "sum", "none".')
+
+        super(FocalLoss_Test,self).__init__()
+        self.alpha = alpha
+        self.gamma = gamma
+        self.ignore_index = ignore_index
+        self.reduction = reduction
+        self.loss_weight = loss_weight
+        self._loss_name = loss_name
+        if alpha is not None:
+            if not isinstance(alpha, torch.Tensor):
+                alpha = torch.tensor(alpha)
+            alpha = alpha.type(torch.cuda.FloatTensor)
+
+        self.nll_loss = nn.NLLLoss(
+            weight=alpha, reduction='none', ignore_index=ignore_index)
+
+    def __repr__(self):
+        arg_keys = ['alpha', 'gamma', 'ignore_index', 'reduction']
+        arg_vals = [self.__dict__[k] for k in arg_keys]
+        arg_strs = [f'{k}={v}' for k, v in zip(arg_keys, arg_vals)]
+        arg_str = ', '.join(arg_strs)
+        return f'{type(self).__name__}({arg_str})'
+
+    def forward(self,
+                pred,
+                target):
+
+        # import pdb;pdb.set_trace()
+
+        if len(target) == 0:
+            return 0.
+
+        # compute weighted cross entropy term: -alpha * log(pt)
+        # (alpha is already part of self.nll_loss)
+        
+        target = (target==1).nonzero(as_tuple=True)[1]
+
+        log_p = F.log_softmax(pred, dim=-1)
+
+        ce = self.nll_loss(log_p, target)
+
+        # get true class column from each row
+        all_rows = torch.arange(len(pred))
+        log_pt = log_p[all_rows, target]
+
+        # compute focal term: (1 - pt)^gamma
+        pt = log_pt.exp()
+        focal_term = (1 - pt)**self.gamma
+
+        # the full loss: -alpha * ((1 - pt)^gamma) * log(pt)
+        loss = focal_term * ce
+
+        if self.reduction == 'mean':
+            # import pdb;pdb.set_trace()
+            loss = loss.mean()
+        elif self.reduction == 'sum':
+            # import pdb;pdb.set_trace()
+            loss = loss.sum()
+
+        return self.loss_weight*loss
+    @property
+    def loss_name(self):
+        return self._loss_name
 
 
 def compute_loss(p, targets, model):  # predictions, targets, model
@@ -78,8 +167,8 @@ def compute_loss(p, targets, model):  # predictions, targets, model
 
     # Focal loss
     g = h['fl_gamma']  # focal loss gamma
-    if g > 0:
-        BCEcls, BCEobj = FocalLoss(BCEcls, device, g, [0.03, 0.025, 0.83, 0.115]), FocalLoss(BCEobj, device, g)
+    if g > 1.0:
+        BCEcls, BCEobj = FocalLoss_Test([0.3, 0.25, 8.3, 1.15], g), FocalLoss(BCEobj,g)
 
     # Losses
     nt = 0  # number of targets
