@@ -18,6 +18,7 @@ from utils.metrics import ap_per_class
 from utils.plots import plot_images, output_to_target
 from utils.torch_utils import select_device, time_synchronized
 
+import wandb
 
 def test(data,
          weights=None,
@@ -35,7 +36,8 @@ def test(data,
          save_txt=False,  # for auto-labelling
          save_conf=False,
          plots=True,
-         log_imgs=0):  # number of logged images
+         log_imgs=0,
+         entity='perforated_line'):  # number of logged images
 
     # Initialize/load model and set device
     training = model is not None
@@ -80,6 +82,8 @@ def test(data,
         import wandb  # Weights & Biases
     except ImportError:
         log_imgs = 0
+
+    
 
     # Dataloader
     if not training:
@@ -220,8 +224,17 @@ def test(data,
     else:
         nt = torch.zeros(1)
 
+
+    # wandb project, entity 설정 해주세요!!!
+    if not training:
+        wandb_run = wandb.init(config=opt, resume="allow",
+                            project='final_yolor' if opt.project == 'runs/test' else Path(opt.project).stem,
+                            entity=entity,
+                            name=save_dir.stem)
+
     # W&B logging
     if plots and wandb:
+        print('---')
         wandb.log({"Images": wandb_images})
         wandb.log({"Validation": [wandb.Image(str(x), caption=x.name) for x in sorted(save_dir.glob('test*.jpg'))]})
 
@@ -276,6 +289,7 @@ def test(data,
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog='test.py')
+    parser.add_argument('--entity', type=str, default='perforated_line', help='wandb entity name')
     parser.add_argument('--weights', nargs='+', type=str, default='yolor-p6.pt', help='model.pt path(s)')
     parser.add_argument('--data', type=str, default='data/coco.yaml', help='*.data path')
     parser.add_argument('--batch-size', type=int, default=16, help='size of each image batch')
@@ -311,6 +325,7 @@ if __name__ == '__main__':
              opt.verbose,
              save_txt=opt.save_txt,
              save_conf=opt.save_conf,
+             entity=opt.entity
              )
 
     elif opt.task == 'study':  # run over a range of settings and save/plot
@@ -320,7 +335,8 @@ if __name__ == '__main__':
             y = []  # y axis
             for i in x:  # img-size
                 print('\nRunning %s point %s...' % (f, i))
-                r, _, t = test(opt.data, weights, opt.batch_size, i, opt.conf_thres, opt.iou_thres, opt.save_json)
+                r, _, t = test(opt.data, weights, opt.batch_size, i,
+                    opt.conf_thres, opt.iou_thres, opt.save_json, entity=opt.entity)
                 y.append(r + t)  # results and times
             np.savetxt(f, y, fmt='%10.4g')  # save
         os.system('zip -r study.zip study_*.txt')
