@@ -78,7 +78,8 @@ def create_dataloader(path, imgsz, batch_size, stride, opt, hyp=None, augment=Fa
                                       single_cls=opt.single_cls,
                                       stride=int(stride),
                                       pad=pad,
-                                      rank=rank)
+                                      rank=rank,
+                                      mode=opt.mode)
 
     batch_size = min(batch_size, len(dataset))
     nw = min([os.cpu_count() // world_size, batch_size if batch_size > 1 else 0, workers])  # number of workers
@@ -104,7 +105,8 @@ def create_dataloader9(path, imgsz, batch_size, stride, opt, hyp=None, augment=F
                                       single_cls=opt.single_cls,
                                       stride=int(stride),
                                       pad=pad,
-                                      rank=rank)
+                                      rank=rank,
+                                      mode=opt.mode)
 
     batch_size = min(batch_size, len(dataset))
     nw = min([os.cpu_count() // world_size, batch_size if batch_size > 1 else 0, workers])  # number of workers
@@ -365,7 +367,7 @@ class LoadStreams:  # multiple IP or RTSP cameras
 
 class LoadImagesAndLabels(Dataset):  # for training/testing
     def __init__(self, path, img_size=640, batch_size=16, augment=False, hyp=None, rect=False, image_weights=False,
-                 cache_images=False, single_cls=False, stride=32, pad=0.0, rank=-1):
+                 cache_images=False, single_cls=False, stride=32, pad=0.0, rank=-1,mode='both'):
         self.img_size = img_size
         self.augment = augment
         self.hyp = hyp
@@ -374,10 +376,20 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
         self.mosaic = self.augment and not self.rect  # load 4 images at a time into a mosaic (only during training)
         self.mosaic_border = [-img_size // 2, -img_size // 2]
         self.stride = stride
+        self.mode = mode
 
         def img2label_paths(img_paths):
             # Define label paths as a function of image paths
-            sa, sb = os.sep + 'images' + os.sep, os.sep + 'labels' + os.sep  # /images/, /labels/ substrings
+            assert self.mode in ['both','helmet','alone'], 'Wrong mode'
+            
+            sa = os.sep + 'images' + os.sep  # /images/ substrings
+            if self.mode == 'both':
+                sb = os.sep + 'labels' + os.sep # /labels/ substrings
+            elif self.mode == 'helmet':
+                sb = os.sep + 'labels_helmet' + os.sep # /labels_helmet/ substrings
+            elif self.mode == 'alone':
+                sb = os.sep + 'labels_alone' + os.sep # /labels_alone/ substrings
+
             return [x.replace(sa, sb, 1).replace(x.split('.')[-1], 'txt') for x in img_paths]
 
         try:
@@ -654,7 +666,7 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
 
 class LoadImagesAndLabels9(Dataset):  # for training/testing
     def __init__(self, path, img_size=640, batch_size=16, augment=False, hyp=None, rect=False, image_weights=False,
-                 cache_images=False, single_cls=False, stride=32, pad=0.0, rank=-1):
+                 cache_images=False, single_cls=False, stride=32, pad=0.0, rank=-1,mode='both'):
         self.img_size = img_size
         self.augment = augment
         self.hyp = hyp
@@ -663,10 +675,20 @@ class LoadImagesAndLabels9(Dataset):  # for training/testing
         self.mosaic = self.augment and not self.rect  # load 4 images at a time into a mosaic (only during training)
         self.mosaic_border = [-img_size // 2, -img_size // 2]
         self.stride = stride
+        self.mode = mode
 
         def img2label_paths(img_paths):
             # Define label paths as a function of image paths
-            sa, sb = os.sep + 'images' + os.sep, os.sep + 'labels' + os.sep  # /images/, /labels/ substrings
+            assert self.mode in ['both','helmet','alone'], 'Wrong mode'
+            
+            sa = os.sep + 'images' + os.sep  # /images/ substrings
+            if self.mode == 'both':
+                sb = os.sep + 'labels' + os.sep # /labels/ substrings
+            elif self.mode == 'helmet':
+                sb = os.sep + 'labels_helmet' + os.sep # /labels_helmet/ substrings
+            elif self.mode == 'alone':
+                sb = os.sep + 'labels_alone' + os.sep # /labels_alone/ substrings
+
             return [x.replace(sa, sb, 1).replace(x.split('.')[-1], 'txt') for x in img_paths]
 
         try:
