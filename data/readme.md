@@ -18,7 +18,7 @@ number of data : 1364 (train : 1003, validation : 240, test : 121)
 annotation : Done  
 cross check : Done  
 EDA : None  
-revision : Add 'add_data' 
+revision : Add 'add_data' to train dataset
 
 Ver 2.2 (update on 2021.12.08)  
 number of data : 1364 (train : 995, validation : 245, test : 124)  
