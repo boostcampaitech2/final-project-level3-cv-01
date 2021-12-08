@@ -11,21 +11,21 @@ number of data : 1321 (train : 960, validation : 240, test : 121)
 annotation : Done  
 cross check : Done  
 EDA : None  
-revision : None
+revision : Add new images(20211204)
 
 Ver 2.1 (update on 2021.12.07)  
 number of data : 1364 (train : 1003, validation : 240, test : 121)  
 annotation : Done  
 cross check : Done  
 EDA : None  
-revision : None
+revision : Add 'add_data' 
 
 Ver 2.2 (update on 2021.12.08)  
 number of data : 1364 (train : 995, validation : 245, test : 124)  
 annotation : Done  
 cross check : Done  
 EDA : None  
-revision : None
+revision : Move images in 'add_data' made with val, test data
 
 
 
