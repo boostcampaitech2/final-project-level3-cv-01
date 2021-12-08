@@ -18,7 +18,7 @@ hsv_h: 0.015  # image HSV-Hue augmentation (fraction)
 hsv_s: 0.7  # image HSV-Saturation augmentation (fraction)
 hsv_v: 0.4  # image HSV-Value augmentation (fraction)
 degrees: 0.0  # image rotation (+/- deg)
-translate: 0.5  # image translation (+/- fraction)
+translate: 0.0  # image translation (+/- fraction)
 scale: 0.5  # image scale (+/- gain)
 shear: 0.0  # image shear (+/- deg)
 perspective: 0.0  # image perspective (+/- fraction), range 0-0.001
@@ -26,7 +26,8 @@ flipud: 0.0  # image flip up-down (probability)
 fliplr: 0.5  # image flip left-right (probability)
 mosaic: 1.0  # image mosaic (probability)
 mixup: 0.0  # image mixup (probability)
-grayscale: 0.3 # grayscale 
-imgaug: 0.5
-rain: 0.4
-snow: 0.3
+grayscale: 0.0 # grayscale 
+imgaug: 0.0
+rain: 0.0
+snow: 0.0
+color: 0.0
