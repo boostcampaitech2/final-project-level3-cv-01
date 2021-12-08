@@ -999,6 +999,13 @@ def load_image(self, index, hyp):
                 else:
                     img = img  
 
+            
+            else:
+                if random.random() < hyp['allchannelsCLAHE']:
+                    img = imgaug_AllChannelsCLAHE(img)
+                else:
+                    img = img
+
 
         return img, (h0, w0), img.shape[:2]  # img, hw_original, hw_resized
     else:
@@ -1422,6 +1429,16 @@ def imgaug_color(image):
         iaa.KMeansColorQuantization(n_colors=(4, 8)),
         iaa.UniformColorQuantization(n_colors=(4, 8)),
         iaa.UniformColorQuantizationToNBits(nb_bits=(2, 8))
+    ])
+    aug_img = seq(images=imgaug_img)
+    res = np.hstack((aug_img))
+    return res
+
+def imgaug_AllChannelsCLAHE(image):
+    imgaug_img = image[np.newaxis, :, :, :]
+    seq = iaa.Sequential([
+        iaa.Emboss(alpha=(0.5,1.0), strength=(0.5,1.5)),
+        iaa.AllChannelsCLAHE(clip_limit=(7,10))
     ])
     aug_img = seq(images=imgaug_img)
     res = np.hstack((aug_img))
