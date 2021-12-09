@@ -77,11 +77,14 @@ def drawBoxes(frame, pred, thres = 0.2): # thres 조절 추가 예정
     return frame
     
 def lookup_checkpoint_files():
-    flie_list = list(os.listdir())
+
+    flie_list = list(os.listdir('/content/drive/MyDrive/web/'))
+    flie_list.sort()
     checkpoint_flie_list = []
     for file in flie_list:
         if file[-3:] == '.pt':
             checkpoint_flie_list.append(file)
+
     return tuple(checkpoint_flie_list)
 
 def main():
@@ -152,7 +155,7 @@ def main():
                 if os.path.exists(filepath_h264):
                     os.remove(filepath_h264)
                 model = attempt_load(f'/content/drive/MyDrive/web/{ckpt_file}', map_location=device)
-                ProcessFrames(vf, model, stop_button, confidence_threshold)
+                ProcessFrames(vf, model, stop_button, confidence_threshold, width, height)
             else:
                 state.run = True
                 trigger_rerun()
