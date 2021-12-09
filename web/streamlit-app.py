@@ -46,10 +46,10 @@ def drawBoxes(frame, pred, thres = 0.9): # thres 조절 추가 예정
     pred = pred.to('cpu')
     boxColor = (128, 255, 0) # very light green
     boxColor = {
-        0: (128, 255, 0),
-        1: (255, 255, 0),
-        2: (0, 0, 255),
-        3: (255, 0, 0),
+        0: (128, 255, 0), # 헬멧O 혼자O 초록색
+        1: (255, 255, 0), # 헬멧X 혼자O 하늘색
+        2: (0, 0, 255), # 헬멧O 혼자X 빨간색
+        3: (255, 0, 0), # 헬멧X 혼자X 파란색
     }
     className = {
         0: "Helmet",
