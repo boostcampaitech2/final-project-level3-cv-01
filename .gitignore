@@ -4,5 +4,6 @@
 
 **/pretrained/
 web/*.pt
+web/*.mp4
 
 **/.ipynb_checkpoints/
