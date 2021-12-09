@@ -42,7 +42,7 @@ def DetermineBoxCenter(box):
 
     return [cx, cy]    
 
-def drawBoxes(frame, pred, thres = 0.9): # thres 조절 추가 예정
+def drawBoxes(frame, pred, thres = 0.2): # thres 조절 추가 예정
     pred = pred.to('cpu')
     boxColor = (128, 255, 0) # very light green
     boxColor = {
@@ -87,12 +87,15 @@ def main():
     start_button = st.empty()
     stop_button = st.empty()
 
-    model = attempt_load('yolor-d6.pt', map_location=device)
+    model = attempt_load('/content/drive/MyDrive/web/yolor-d6.pt', map_location=device)
 
 
     with upload:
-        f = st.file_uploader('Upload Video file', key = state.upload_key)
+        f = st.file_uploader('Upload Image or Video file', key = state.upload_key)
     
+    filepath = '/content/drive/MyDrive/web/result.mp4'
+    filepath_h264 = '/content/drive/MyDrive/web/result_h264.mp4'
+
     if f is not None:
         tfile = tempfile.NamedTemporaryFile(delete = False)
         tfile.write(f.read())  
@@ -113,6 +116,12 @@ def main():
                 state.upload_key = str(randint(1000, int(1e6)))
                 state.enabled = True
                 state.run = False
+                
+                if os.path.exists(filepath):
+                    os.remove(filepath)
+                if os.path.exists(filepath_h264):
+                    os.remove(filepath_h264)
+
                 ProcessFrames(vf, model, stop_button)
             else:
                 state.run = True
@@ -122,6 +131,9 @@ def main():
     # vf = cv2.VideoCapture('/opt/ml/video/GOPR1300.MP4')
     # ProcessFrames(vf, model, stop_button)
     # ######## TEST MODE #######
+
+def ProcessImage(image, obj_detector, stop):
+    pass
 
 def ProcessFrames(vf, obj_detector, stop): 
     """
@@ -147,7 +159,7 @@ def ProcessFrames(vf, obj_detector, stop):
     start = time.time()
     fourcc = cv2.VideoWriter_fourcc(*'mp4v') # output video codec
     video_writer = cv2.VideoWriter(
-                            "result.mp4", fourcc, fps, (1280, 960)
+                            "/content/drive/MyDrive/web/result.mp4", fourcc, fps, (1280, 960)
                         ) # Warning: 마지막 파라미터(이미지 크기 예:(1280, 960))가 안 맞으면 동영상이 저장이 안 됨!
 
     while vf.isOpened():
@@ -185,9 +197,12 @@ def ProcessFrames(vf, obj_detector, stop):
 
     video_writer.release()    
     print('finish!')
-    os.system("ffmpeg -i result.mp4 -vcodec libx264 result_h264.mp4")
+    with st.spinner(text="Detecting Finished! Converting Video Codec..."):
+        os.system("ffmpeg -i /content/drive/MyDrive/web/result.mp4 -vcodec libx264 /content/drive/MyDrive/web/result_h264.mp4")
     # 서버에 저장된 동영상 파일을 불러와 페이지에 띄우는 부분
-    video_file = open("result_h264.mp4", 'rb')
+    video_file = open("/content/drive/MyDrive/web/result_h264.mp4", 'rb')
     video_bytes = video_file.read()
     st.video(video_bytes)
+
+
 main()
