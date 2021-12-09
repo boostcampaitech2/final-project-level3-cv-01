@@ -40,7 +40,7 @@ def DetermineBoxCenter(box):
     cx = int(box[0] + (box[2]/2))
     cy = int(box[1] + (box[3]/2))
 
-    return [cx, cy]    
+    return [cx, cy] 
 
 def drawBoxes(frame, pred, thres = 0.2): # thres 조절 추가 예정
     pred = pred.to('cpu')
@@ -75,7 +75,14 @@ def drawBoxes(frame, pred, thres = 0.2): # thres 조절 추가 예정
         frame = cv2.putText(frame, txt, start_coord, cv2.FONT_HERSHEY_SIMPLEX, 0.5, TextColor, 2)
 
     return frame
-
+    
+def lookup_checkpoint_files():
+    flie_list = list(os.listdir())
+    checkpoint_flie_list = []
+    for file in flie_list:
+        if file[-3:] == '.pt':
+            checkpoint_flie_list.append(file)
+    return tuple(checkpoint_flie_list)
 
 def main():
     st.set_page_config(page_title = "안전모 미착용, 승차인원 초과 멈춰~!", 
@@ -87,16 +94,39 @@ def main():
     start_button = st.empty()
     stop_button = st.empty()
 
-    model = attempt_load('/content/drive/MyDrive/web/yolor-d6.pt', map_location=device)
-
 
     with upload:
         f = st.file_uploader('Upload Image or Video file', key = state.upload_key)
+
+        ckpt_files = lookup_checkpoint_files()
+
+        ckpt_file = st.sidebar.radio(
+            "select checkpoint file",
+            ckpt_files
+        )
+
+        confidence_threshold = st.sidebar.slider("Confidence score threshold", 
+            min_value=0.1,
+            max_value=1.0,
+            value=0.7,
+            step=0.05,
+            )
+        
+        video_resolution = st.sidebar.radio(
+            "select result video resolution",
+            ("1280 x 960", "640 x 480")
+        )
+
+        if video_resolution == "1280 x 960":
+            width, height = 1280, 960
+        elif video_resolution == "640 x 480":
+            width, height = 640, 480
     
     filepath = '/content/drive/MyDrive/web/result.mp4'
     filepath_h264 = '/content/drive/MyDrive/web/result_h264.mp4'
 
     if f is not None:
+
         tfile = tempfile.NamedTemporaryFile(delete = False)
         tfile.write(f.read())  
         upload.empty()
@@ -121,8 +151,8 @@ def main():
                     os.remove(filepath)
                 if os.path.exists(filepath_h264):
                     os.remove(filepath_h264)
-
-                ProcessFrames(vf, model, stop_button)
+                model = attempt_load(f'/content/drive/MyDrive/web/{ckpt_file}', map_location=device)
+                ProcessFrames(vf, model, stop_button, confidence_threshold)
             else:
                 state.run = True
                 trigger_rerun()
@@ -135,7 +165,7 @@ def main():
 def ProcessImage(image, obj_detector, stop):
     pass
 
-def ProcessFrames(vf, obj_detector, stop): 
+def ProcessFrames(vf, obj_detector, stop, confidence_threshold, width, height): 
     """
         main loop for processing video file:
         Params
@@ -159,14 +189,14 @@ def ProcessFrames(vf, obj_detector, stop):
     start = time.time()
     fourcc = cv2.VideoWriter_fourcc(*'mp4v') # output video codec
     video_writer = cv2.VideoWriter(
-                            "/content/drive/MyDrive/web/result.mp4", fourcc, fps, (1280, 960)
+                            "/content/drive/MyDrive/web/result.mp4", fourcc, fps, (width, height)
                         ) # Warning: 마지막 파라미터(이미지 크기 예:(1280, 960))가 안 맞으면 동영상이 저장이 안 됨!
 
     while vf.isOpened():
         # if frame is read correctly ret is True
         ret, frame = vf.read()
         try:
-            frame = cv2.resize(frame, (1280, 960)) # 추후 조절하는 기능 추가할 예정
+            frame = cv2.resize(frame, (width, height)) # 추후 조절하는 기능 추가할 예정
         except: 
             print('resize failed :', frame_counter)
             if frame_counter/num_frames == 1:
@@ -185,7 +215,7 @@ def ProcessFrames(vf, obj_detector, stop):
             frame_tensor = frame_tensor.unsqueeze(0)
         pred = obj_detector(frame_tensor)[0]
         pred = non_max_suppression(pred)[0]
-        frame = drawBoxes(frame, pred) 
+        frame = drawBoxes(frame, pred, confidence_threshold) 
 
         end = time.time()
 
