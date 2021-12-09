@@ -68,6 +68,9 @@ def exif_size(img):
 
 def create_dataloader(path, imgsz, batch_size, stride, opt, hyp=None, augment=False, cache=False, pad=0.0, rect=False,
                       rank=-1, world_size=1, workers=8):
+    
+    global aug_
+    aug_ = opt.aug
     # Make sure only the first process in DDP process the dataset first, and the following others can use the cache
     with torch_distributed_zero_first(rank):
         dataset = LoadImagesAndLabels(path, imgsz, batch_size,
@@ -95,6 +98,9 @@ def create_dataloader(path, imgsz, batch_size, stride, opt, hyp=None, augment=Fa
 
 def create_dataloader9(path, imgsz, batch_size, stride, opt, hyp=None, augment=False, cache=False, pad=0.0, rect=False,
                       rank=-1, world_size=1, workers=8):
+    
+    global aug_
+    aug_ = opt.aug
     # Make sure only the first process in DDP process the dataset first, and the following others can use the cache
     with torch_distributed_zero_first(rank):
         dataset = LoadImagesAndLabels9(path, imgsz, batch_size,
@@ -985,26 +991,30 @@ def load_image(self, index, hyp):
             interp = cv2.INTER_AREA if r < 1 and not self.augment else cv2.INTER_LINEAR
             img = cv2.resize(img, (int(w0 * r), int(h0 * r)), interpolation=interp)
 
-            # 이 부분에서 처리 하시면 각각의 이미지에 처리가 됩니다.
-            if random.random() < hyp['grayscale']:
-                img = rgb2gray(img)
+            if aug_ == 'y':
+                # 이 부분에서 처리 하시면 각각의 이미지에 처리가 됩니다.
+                if random.random() < hyp['grayscale']:
+                    img = rgb2gray(img)
 
-            if random.random() < hyp['imgaug']:
-                if random.random() < hyp['rain']:
-                    img = imgaug_rain(img)
-                elif random.random() < hyp['snow']:
-                    img = imgaug_snow(img)
-                elif random.random() < hyp['color']:
-                    img = imgaug_color(img)
+                if random.random() < hyp['imgaug']:
+                    if random.random() < hyp['rain']:
+                        img = imgaug_rain(img)
+                    elif random.random() < hyp['snow']:
+                        img = imgaug_snow(img)
+                    elif random.random() < hyp['color']:
+                        img = imgaug_color(img)
+                    else:
+                        img = img  
+
+                
                 else:
-                    img = img  
-
-            
+                    if random.random() < hyp['allchannelsCLAHE']:
+                        img = imgaug_AllChannelsCLAHE(img)
+                    else:
+                        img = img
+                
             else:
-                if random.random() < hyp['allchannelsCLAHE']:
-                    img = imgaug_AllChannelsCLAHE(img)
-                else:
-                    img = img
+                img = img
 
 
         return img, (h0, w0), img.shape[:2]  # img, hw_original, hw_resized

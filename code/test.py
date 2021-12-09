@@ -21,6 +21,7 @@ from utils.torch_utils import select_device, time_synchronized
 import wandb
 
 def test(data,
+         aug,
          weights=None,
          batch_size=16,
          imgsz=640,
@@ -307,6 +308,9 @@ if __name__ == '__main__':
     parser.add_argument('--project', default='runs/test', help='save to project/name')
     parser.add_argument('--name', default='exp', help='save to project/name')
     parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
+    # test.py에서 img augmentation을 할 것인지 안 할것인지, 디폴트 값은 하는 것으로
+    parser.add_argument('--aug', type=str, default='y', help='in test py img augmentation')
+
     opt = parser.parse_args()
     opt.save_json |= opt.data.endswith('coco.yaml')
     opt.data = check_file(opt.data)  # check file
@@ -314,6 +318,7 @@ if __name__ == '__main__':
 
     if opt.task in ['val', 'test']:  # run normally
         test(opt.data,
+             opt.aug,
              opt.weights,
              opt.batch_size,
              opt.img_size,

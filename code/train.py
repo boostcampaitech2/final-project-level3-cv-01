@@ -360,6 +360,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
             if not opt.notest or final_epoch:  # Calculate mAP
                 if epoch >= 3:
                     results, maps, times = test.test(opt.data,
+                                                opt.aug,
                                                 batch_size=batch_size*2,
                                                 imgsz=imgsz_test,
                                                 model=ema.ema,
@@ -512,6 +513,7 @@ if __name__ == '__main__':
     parser.add_argument('--name', default='exp', help='save to project/name')
     parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
     parser.add_argument('--mode', type=str, default='both', help='which label to train with (both/helmet/alone)')
+    parser.add_argument('--aug', type=str, default='y', help='in test py img augmentation')
     opt = parser.parse_args()
 
     # Set DDP variables
