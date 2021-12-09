@@ -32,4 +32,5 @@ rain: 0.0
 snow: 0.0
 color: 0.0
 allchannelsCLAHE: 0.0
+side: [2, 3]
 
