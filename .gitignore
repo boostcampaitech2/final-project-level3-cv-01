@@ -3,6 +3,7 @@
 **/wandb/
 
 **/pretrained/
-web/yolor-d6.pt
+web/*.pt
+web/*.mp4
 
 **/.ipynb_checkpoints/
