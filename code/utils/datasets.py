@@ -6,11 +6,13 @@ import os
 import random
 import shutil
 import time
+import json
+import os.path as osp
 from itertools import repeat
 from multiprocessing.pool import ThreadPool
 from pathlib import Path
 from threading import Thread
-from typing import Sequence
+from typing import Sequence, List
 
 import cv2
 import numpy as np
@@ -32,7 +34,6 @@ import imgaug as ia
 import imgaug.augmenters as iaa
 
 import yaml
-
 
 
 # Parameters
@@ -412,6 +413,8 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
                 else:
                     raise Exception('%s does not exist' % p)
             self.img_files = sorted([x.replace('/', os.sep) for x in f if x.split('.')[-1].lower() in img_formats])
+            if hyp.get('side'):
+                self.img_files = get_side_images(self.img_files, class_nums=hyp['side'])
             assert self.img_files, 'No images found'
         except Exception as e:
             raise Exception('Error loading data from %s: %s\nSee %s' % (path, e, help_url))
@@ -711,6 +714,8 @@ class LoadImagesAndLabels9(Dataset):  # for training/testing
                 else:
                     raise Exception('%s does not exist' % p)
             self.img_files = sorted([x.replace('/', os.sep) for x in f if x.split('.')[-1].lower() in img_formats])
+            if hyp.get('side'):
+                self.img_files = get_side_images(self.img_files, class_nums=hyp['side'])
             assert self.img_files, 'No images found'
         except Exception as e:
             raise Exception('Error loading data from %s: %s\nSee %s' % (path, e, help_url))
@@ -1453,3 +1458,38 @@ def imgaug_AllChannelsCLAHE(image):
     aug_img = seq(images=imgaug_img)
     res = np.hstack((aug_img))
     return res
+
+def get_side_images(img_files: List[str],
+                    class_nums: List[int]=[2, 3]
+                    ) -> List[str]:
+
+    def _img2json_path(img_path: str) -> str:
+        sa, sb = os.sep + 'images' + os.sep, os.sep + 'json' + os.sep
+        return img_path.replace(sa, sb, 1).replace(img_path.split('.')[-1], 'json')
+
+    def _is_side_image(img_file: str) -> bool:
+        json_file = _img2json_path(img_file)
+
+        with open(json_file, 'r', encoding='utf-8') as f:
+            label = json.load(f)
+
+        objects = label['objects']
+        for obj in objects:
+            if int(obj['classTitle']) not in class_nums:
+                continue
+            for tag in obj['tags']:
+                if tag['name'] == 'orientation' and tag['value'] != 'Side':
+                    return False
+        else:
+            return True
+
+    if 'test' in img_files[0]:
+        return img_files
+        
+    side_images = []
+
+    for img_file in img_files:
+        if _is_side_image(img_file):
+            side_images.append(img_file)
+            
+    return side_images
