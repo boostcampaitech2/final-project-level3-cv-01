@@ -15,7 +15,7 @@ from streamlit.server.server import Server
 from models.experimental import attempt_load
 from utils.general import non_max_suppression
 from utils.torch_utils import select_device
-
+from utils.prototype import drawBoxes, lookup_checkpoint_files, np_to_tensor
 
 device = select_device('')
 
@@ -37,67 +37,6 @@ def trigger_rerun():
     # this_session.request_rerun()
     st.experimental_rerun()
 
-def DetermineBoxCenter(box):
-    cx = int(box[0] + (box[2]/2))
-    cy = int(box[1] + (box[3]/2))
-
-    return [cx, cy] 
-
-def drawBoxes(frame, pred, thres = 0.2): # thres 조절 추가 예정
-    pred = pred.to('cpu')
-    boxColor = (128, 255, 0) # very light green
-    boxColor = {
-        0: (128, 255, 0), # 헬멧O 혼자O 초록색
-        1: (255, 255, 0), # 헬멧X 혼자O 하늘색
-        2: (0, 0, 255), # 헬멧O 혼자X 빨간색
-        3: (255, 0, 0), # 헬멧X 혼자X 파란색
-    }
-    className = {
-        0: "Helmet",
-        1: "NoHelmet",
-        2: "SharingHelmet",
-        3: "Sharing",
-    }
-    TextColor = (255, 255, 255) # white
-    boxThickness = 3 
-
-    for x1, y1, x2, y2, conf, lbl in pred:
-        if conf < thres:
-            break
-        lbl = int(lbl)
-        if lbl not in [0,1,2,3]:
-            continue
-        x1, y1, x2, y2, conf = int(x1), int(y1), int(x2), int(y2), float(conf) # tensor to int or float
-        start_coord = (x1, y1)
-        end_coord = (x2, y2)
-        # text to be included to the output image
-        txt = f'{className[lbl]} ({round(conf, 3)})'
-        frame = cv2.rectangle(frame, start_coord, end_coord, boxColor[lbl], boxThickness)
-        frame = cv2.putText(frame, txt, start_coord, cv2.FONT_HERSHEY_SIMPLEX, 0.5, TextColor, 2)
-
-    return frame
-    
-def lookup_checkpoint_files():
-
-    flie_list = list(os.listdir('/content/drive/MyDrive/web/'))
-    flie_list.sort()
-    checkpoint_flie_list = []
-    for file in flie_list:
-        if file[-3:] == '.pt':
-            checkpoint_flie_list.append(file)
-
-    return tuple(checkpoint_flie_list)
-
-def np_to_tensor(image):
-    
-    image_tensor = np.transpose(image, (2, 0, 1))
-    image_tensor = torch.from_numpy(image_tensor).to(device)
-    image_tensor = image_tensor.float()  # uint8 to fp16/32
-    image_tensor /= 255.0  # 0 - 255 to 0.0 - 1.0
-    if image_tensor.ndimension() == 3:
-        image_tensor = image_tensor.unsqueeze(0)
-
-    return image_tensor
 
 def main():
     st.set_page_config(page_title = "안전모 미착용, 승차인원 초과 멈춰~!", 
@@ -158,7 +97,6 @@ def main():
 
         if state.start:
             start_button.empty()
-            #state.upload_key = str(randint(1000, int(1e6)))
             state.enabled = False
             if state.run:
                 tfile.close()
@@ -182,11 +120,6 @@ def main():
                 state.run = True
                 trigger_rerun()
 
-    # ######## TEST MODE #######
-    # vf = cv2.VideoCapture('/opt/ml/video/GOPR1300.MP4')
-    # ProcessFrames(vf, model, stop_button)
-    # ######## TEST MODE #######
-
 
 def ProcessImage(image, obj_detector, confidence_threshold, width, height):
     image = np.array(image) #pil to cv
@@ -198,6 +131,7 @@ def ProcessImage(image, obj_detector, confidence_threshold, width, height):
     pred = non_max_suppression(pred)[0]
     image = drawBoxes(image, pred, confidence_threshold) 
     st.image(image)
+
 
 def ProcessFrames(vf, obj_detector, stop, confidence_threshold, width, height): 
     """
@@ -217,7 +151,6 @@ def ProcessFrames(vf, obj_detector, stop, confidence_threshold, width, height):
 
     frame_counter = 0
     _stop = stop.button("stop")
-    # new_car_count_txt = st.empty()
     fps_meas_txt = st.empty()
     bar = st.progress(frame_counter)
     start = time.time()
@@ -230,7 +163,7 @@ def ProcessFrames(vf, obj_detector, stop, confidence_threshold, width, height):
         # if frame is read correctly ret is True
         ret, frame = vf.read()
         try:
-            frame = cv2.resize(frame, (width, height)) # 추후 조절하는 기능 추가할 예정
+            frame = cv2.resize(frame, (width, height))
         except: 
             print('resize failed :', frame_counter)
             if frame_counter/num_frames == 1:
@@ -258,7 +191,6 @@ def ProcessFrames(vf, obj_detector, stop, confidence_threshold, width, height):
     print('finish!')
     with st.spinner(text="Detecting Finished! Converting Video Codec..."):
         os.system("ffmpeg -i /content/drive/MyDrive/web/result.mp4 -vcodec libx264 /content/drive/MyDrive/web/result_h264.mp4")
-    # 서버에 저장된 동영상 파일을 불러와 페이지에 띄우는 부분
     video_file = open("/content/drive/MyDrive/web/result_h264.mp4", 'rb')
     video_bytes = video_file.read()
     st.video(video_bytes)
