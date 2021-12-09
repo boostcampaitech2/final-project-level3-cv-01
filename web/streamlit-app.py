@@ -6,6 +6,7 @@ import tempfile
 import torch
 sys.path.append(os.getcwd())
 import cv2 
+from PIL import Image
 import time
 import utils.SessionState as SessionState
 from random import randint
@@ -87,6 +88,17 @@ def lookup_checkpoint_files():
 
     return tuple(checkpoint_flie_list)
 
+def np_to_tensor(image):
+    
+    image_tensor = np.transpose(image, (2, 0, 1))
+    image_tensor = torch.from_numpy(image_tensor).to(device)
+    image_tensor = image_tensor.float()  # uint8 to fp16/32
+    image_tensor /= 255.0  # 0 - 255 to 0.0 - 1.0
+    if image_tensor.ndimension() == 3:
+        image_tensor = image_tensor.unsqueeze(0)
+
+    return image_tensor
+
 def main():
     st.set_page_config(page_title = "안전모 미착용, 승차인원 초과 멈춰~!", 
     page_icon=":scooter:")
@@ -115,14 +127,14 @@ def main():
             step=0.05,
             )
         
-        video_resolution = st.sidebar.radio(
+        result_resolution = st.sidebar.radio(
             "select result video resolution",
-            ("1280 x 960", "640 x 480")
+            ("1280 x 960",)
         )
 
-        if video_resolution == "1280 x 960":
+        if result_resolution == "1280 x 960":
             width, height = 1280, 960
-        elif video_resolution == "640 x 480":
+        elif result_resolution == "640 x 480":
             width, height = 640, 480
     
     filepath = '/content/drive/MyDrive/web/result.mp4'
@@ -133,7 +145,12 @@ def main():
         tfile = tempfile.NamedTemporaryFile(delete = False)
         tfile.write(f.read())  
         upload.empty()
-        vf = cv2.VideoCapture(tfile.name)
+        if f.type.split('/')[0].lower() == 'image':
+            vf = Image.open(tfile.name)
+            st.image(vf)
+        else:
+            vf = cv2.VideoCapture(tfile.name)
+        print(type(vf))
 
         if not state.run:
             start = start_button.button("start")
@@ -154,8 +171,13 @@ def main():
                     os.remove(filepath)
                 if os.path.exists(filepath_h264):
                     os.remove(filepath_h264)
+
                 model = attempt_load(f'/content/drive/MyDrive/web/{ckpt_file}', map_location=device)
-                ProcessFrames(vf, model, stop_button, confidence_threshold, width, height)
+
+                if isinstance(vf, cv2.VideoCapture):                       
+                    ProcessFrames(vf, model, stop_button, confidence_threshold, width, height)
+                else:
+                    ProcessImage(vf, model, confidence_threshold, width, height)
             else:
                 state.run = True
                 trigger_rerun()
@@ -165,8 +187,17 @@ def main():
     # ProcessFrames(vf, model, stop_button)
     # ######## TEST MODE #######
 
-def ProcessImage(image, obj_detector, stop):
-    pass
+
+def ProcessImage(image, obj_detector, confidence_threshold, width, height):
+    image = np.array(image) #pil to cv
+    image = cv2.resize(image, (width, height))
+    
+    image_tensor = np_to_tensor(image)
+
+    pred = obj_detector(image_tensor)[0]
+    pred = non_max_suppression(pred)[0]
+    image = drawBoxes(image, pred, confidence_threshold) 
+    st.image(image)
 
 def ProcessFrames(vf, obj_detector, stop, confidence_threshold, width, height): 
     """
@@ -210,12 +241,7 @@ def ProcessFrames(vf, obj_detector, stop, confidence_threshold, width, height):
             break
         if not ret:
             print("Can't receive frame (stream end?). Exiting ...")
-        frame_tensor = np.transpose(frame, (2, 0, 1))
-        frame_tensor = torch.from_numpy(frame_tensor).to(device)
-        frame_tensor = frame_tensor.float()  # uint8 to fp16/32
-        frame_tensor /= 255.0  # 0 - 255 to 0.0 - 1.0
-        if frame_tensor.ndimension() == 3:
-            frame_tensor = frame_tensor.unsqueeze(0)
+        frame_tensor = np_to_tensor(frame)
         pred = obj_detector(frame_tensor)[0]
         pred = non_max_suppression(pred)[0]
         frame = drawBoxes(frame, pred, confidence_threshold) 
