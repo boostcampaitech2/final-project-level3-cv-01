@@ -310,6 +310,7 @@ if __name__ == '__main__':
     parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
     # test.py에서 img augmentation을 할 것인지 안 할것인지, 디폴트 값은 하는 것으로
     parser.add_argument('--aug', type=str, default='y', help='in test py img augmentation')
+    parser.add_argument('--mode', type=str, default='both', help='which label to train with (both/helmet/alone)')
 
     opt = parser.parse_args()
     opt.save_json |= opt.data.endswith('coco.yaml')
