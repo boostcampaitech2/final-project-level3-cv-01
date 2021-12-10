@@ -77,7 +77,7 @@ def main():
             width, height = 640, 480
     
     filepath = '/content/drive/MyDrive/web/result.mp4'
-    filepath_h264 = '/content/drive/MyDrive/web/result_h264.mp4'
+    filepath_h264 = '/content/drive/MyDrive/web/result_264.mp4'
 
     if f is not None:
 
@@ -110,7 +110,7 @@ def main():
                 if os.path.exists(filepath_h264):
                     os.remove(filepath_h264)
 
-                model = attempt_load(f'/content/drive/MyDrive/web/{ckpt_file}', map_location=device)
+                model = attempt_load(f'/opt/ml/final_project/web/{ckpt_file}', map_location=device)
 
                 if isinstance(vf, cv2.VideoCapture):                       
                     ProcessFrames(vf, model, stop_button, confidence_threshold, width, height)
@@ -190,8 +190,8 @@ def ProcessFrames(vf, obj_detector, stop, confidence_threshold, width, height):
     video_writer.release()    
     print('finish!')
     with st.spinner(text="Detecting Finished! Converting Video Codec..."):
-        os.system("ffmpeg -i /content/drive/MyDrive/web/result.mp4 -vcodec libx264 /content/drive/MyDrive/web/result_h264.mp4")
-    video_file = open("/content/drive/MyDrive/web/result_h264.mp4", 'rb')
+        os.system("ffmpeg -i /opt/ml/final_project/web/result.mp4 -vcodec libx264 /opt/ml/final_project/web/result_h264.mp4")
+    video_file = open("/opt/ml/final_project/web/result_h264.mp4", 'rb')
     video_bytes = video_file.read()
     st.video(video_bytes)
 
