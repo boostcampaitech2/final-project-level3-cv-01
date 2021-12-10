@@ -125,7 +125,7 @@ def ProcessImage(image, obj_detector, confidence_threshold, width, height):
     image = np.array(image) #pil to cv
     image = cv2.resize(image, (width, height))
     
-    image_tensor = np_to_tensor(image)
+    image_tensor = np_to_tensor(image, device)
 
     pred = obj_detector(image_tensor)[0]
     pred = non_max_suppression(pred)[0]
@@ -174,7 +174,7 @@ def ProcessFrames(vf, obj_detector, stop, confidence_threshold, width, height):
             break
         if not ret:
             print("Can't receive frame (stream end?). Exiting ...")
-        frame_tensor = np_to_tensor(frame)
+        frame_tensor = np_to_tensor(frame, device)
         pred = obj_detector(frame_tensor)[0]
         pred = non_max_suppression(pred)[0]
         frame = drawBoxes(frame, pred, confidence_threshold) 
