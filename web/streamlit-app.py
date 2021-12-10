@@ -76,8 +76,8 @@ def main():
         elif result_resolution == "640 x 480":
             width, height = 640, 480
     
-    filepath = '/content/drive/MyDrive/web/result.mp4'
-    filepath_h264 = '/content/drive/MyDrive/web/result_264.mp4'
+    filepath = '/opt/ml/final_project/web/result.mp4'
+    filepath_h264 = '/opt/ml/final_project/web/result_264.mp4'
 
     if f is not None:
 
