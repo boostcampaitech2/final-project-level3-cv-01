@@ -1462,6 +1462,23 @@ def imgaug_AllChannelsCLAHE(image):
 def get_side_images(img_files: List[str],
                     class_nums: List[int]=[2, 3]
                     ) -> List[str]:
+    """
+    Get images that have objects, none of which orientation is 'Side'.
+    Get rid of images that have objects included in class_nums and some
+    of which orientation tags are 'Side'.
+    If the input image files are about train or validation, returns
+    side image file names. If the input image files are about test,
+    returns themselves.
+
+    Args:
+        img_files: A list of original image file names.
+        class_nums: A list of class numbers to select only side images.
+
+    Returns:
+        side_images: If the input image files are about train or
+            validation, return side image file names.
+            If not, return original image file names.
+    """
 
     def _img2json_path(img_path: str) -> str:
         sa, sb = os.sep + 'images' + os.sep, os.sep + 'json' + os.sep
