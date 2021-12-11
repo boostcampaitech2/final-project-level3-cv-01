@@ -156,7 +156,7 @@ def ProcessFrames(vf, obj_detector, stop, confidence_threshold, width, height):
     start = time.time()
     fourcc = cv2.VideoWriter_fourcc(*'mp4v') # output video codec
     video_writer = cv2.VideoWriter(
-                            "/content/drive/MyDrive/web/result.mp4", fourcc, fps, (width, height)
+                            "/opt/ml/final_project/web/result.mp4", fourcc, fps, (width, height)
                         ) # Warning: 마지막 파라미터(이미지 크기 예:(1280, 960))가 안 맞으면 동영상이 저장이 안 됨!
 
     while vf.isOpened():

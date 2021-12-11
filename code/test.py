@@ -38,6 +38,7 @@ def test(data,
          save_conf=False,
          plots=True,
          log_imgs=0,
+         agnostic=False,
          entity='perforated_line'):  # number of logged images
 
     # Initialize/load model and set device
@@ -121,7 +122,7 @@ def test(data,
 
             # Run NMS
             t = time_synchronized()
-            output = non_max_suppression(inf_out, conf_thres=conf_thres, iou_thres=iou_thres)
+            output = non_max_suppression(inf_out, conf_thres=conf_thres, iou_thres=iou_thres, merge=False, classes=None, agnostic=agnostic)
             t1 += time_synchronized() - t
 
         # Statistics per image
@@ -310,6 +311,7 @@ if __name__ == '__main__':
     parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
     # test.py에서 img augmentation을 할 것인지 안 할것인지, 디폴트 값은 하는 것으로
     parser.add_argument('--aug', type=str, default='y', help='in test py img augmentation')
+    parser.add_argument('--agnostic', action='store_true', help='merge boxes with different classes during nms')
     parser.add_argument('--mode', type=str, default='both', help='which label to train with (both/helmet/alone)')
 
     opt = parser.parse_args()
@@ -331,6 +333,7 @@ if __name__ == '__main__':
              opt.verbose,
              save_txt=opt.save_txt,
              save_conf=opt.save_conf,
+             agnostic=opt.agnostic,
              entity=opt.entity
              )
 

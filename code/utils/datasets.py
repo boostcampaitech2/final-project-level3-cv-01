@@ -714,7 +714,7 @@ class LoadImagesAndLabels9(Dataset):  # for training/testing
                 else:
                     raise Exception('%s does not exist' % p)
             self.img_files = sorted([x.replace('/', os.sep) for x in f if x.split('.')[-1].lower() in img_formats])
-            if hyp.get('side'):
+            if hyp and hyp.get('side'):
                 self.img_files = get_side_images(self.img_files, class_nums=hyp['side'])
             assert self.img_files, 'No images found'
         except Exception as e:
