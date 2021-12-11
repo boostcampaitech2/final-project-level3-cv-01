@@ -17,7 +17,7 @@ from utils.prototype import lookup_checkpoint_files
 from requests_toolbelt.multipart.encoder import MultipartEncoder
 from streamlit.server.server import Server
 
-backend = "http://localhost:8001"
+backend = "http://localhost:8000"
 
 
 @st.cache(
@@ -40,11 +40,11 @@ def trigger_rerun():
     st.experimental_rerun()
 
 
-def detect_image(data, server):
+def detect_image(data, server, width, height, conf, ckpt_file):
     m = MultipartEncoder(fields={"file": ("filename", data, "image/jpeg")})
 
     resp = requests.post(
-        server + "/detection/image",
+        server + f"/detection/image/?width={width}&height={height}&conf={conf}&ckpt_file={ckpt_file}",
         data=m,
         headers={"Content-Type": m.content_type},
         timeout=8000,
@@ -110,8 +110,8 @@ def main():
         elif result_resolution == "640 x 480":
             width, height = 640, 480
     
-    filepath = '/opt/ml/yolor/web/result.mp4'
-    filepath_h264 = '/opt/ml/yolor/web/result_264.mp4'
+    filepath = '/opt/ml/final_project/web/result.mp4'
+    filepath_h264 = '/opt/ml/final_project/web/result_264.mp4'
 
     if input_data is not None:
         
@@ -136,7 +136,6 @@ def main():
             state.enabled = False
             
             if state.run:
-                input_data.close()
                 state.upload_key = str(randint(1000, int(1e6)))
                 state.enabled = True
                 state.run = False
@@ -147,8 +146,9 @@ def main():
                     os.remove(filepath_h264)
 
                 if data_type == "Image":
-                    pred_image = detect_image(input_data)
-                    st.image(pred_image)
+                    resp = detect_image(input_data, backend, width, height, confidence_threshold, ckpt_file)
+                    st.image(resp.content)
+                input_data.close()
             else:
                 state.run = True
                 trigger_rerun()
