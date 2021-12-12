@@ -148,7 +148,7 @@ def main():
                         video_file = open("/opt/ml/final_project/backend/result_h264.mp4", 'rb')
                         video_bytes = video_file.read()
                         st.video(video_bytes)
-                #input_data.close()
+                
             else:
                 state.run = True
                 trigger_rerun()
