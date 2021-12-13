@@ -42,11 +42,11 @@ def trigger_rerun():
     st.experimental_rerun()
 
 
-def detect_image(data, server, width, height, conf, ckpt_file):
+def detect_image(data, server, width, height, confthres, ckpt_file): # conf -> confthres
     m = MultipartEncoder(fields={"file": ("filename", data, "image/jpeg")})
     print(m)
     resp = requests.post(
-        server + f"/detection/image/?width={width}&height={height}&conf={conf}&ckpt_file={ckpt_file}",
+        server + f"/detection/image/?width={width}&height={height}&confthres={confthres}&ckpt_file={ckpt_file}",
         data=m,
         headers={"Content-Type": m.content_type},
         timeout=8000,
@@ -54,11 +54,11 @@ def detect_image(data, server, width, height, conf, ckpt_file):
 
     return resp
 
-    
-def detect_video(data, server, width, height, conf, ckpt_file):
+     
+def detect_video(data, server, width, height, confthres, ckpt_file): # conf -> confthres
     m = MultipartEncoder(fields={"file": ("filename", data, "video/mp4")})
     requests.post(
-        server + f"/detection/video/?width={width}&height={height}&conf={conf}&ckpt_file={ckpt_file}",
+        server + f"/detection/video/?width={width}&height={height}&confthres={confthres}&ckpt_file={ckpt_file}",
         data = m,
         headers = {"Content-Type": m.content_type},
         timeout=8000,

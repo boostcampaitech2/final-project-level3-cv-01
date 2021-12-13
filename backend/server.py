@@ -8,6 +8,7 @@ from utils.torch_utils import select_device
 from utils.general import non_max_suppression
 from utils.torch_utils import select_device
 from utils.prototype import drawBoxes, np_to_tensor
+from collections import defaultdict
 
 import time
 import io
@@ -27,8 +28,8 @@ app = FastAPI(
 task = {}
 
 
-@app.post("/detection/image/")
-def post_predict_detector_image(file: bytes = File(...), width: int = 1280, height: int = 960, conf: float = 0.7, ckpt_file: str = 'yolor-d6.pt'):
+@app.post("/detection/image/") # conf -> confthres
+def post_predict_detector_image(file: bytes = File(...), width: int = 1280, height: int = 960, confthres: float = 0.7, ckpt_file: str = 'yolor-d6.pt'):
     logger.info("get image")
     image = Image.open(io.BytesIO(file))
     cv_image = np.array(image)
@@ -36,15 +37,15 @@ def post_predict_detector_image(file: bytes = File(...), width: int = 1280, heig
     tensor_image = np_to_tensor(cv_image, device)
     pred = detector_model(tensor_image)[0]
     pred = non_max_suppression(pred)[0]
-    converted_img = drawBoxes(cv_image, pred, conf) 
+    converted_img = drawBoxes(cv_image, pred, confthres) 
     converted_img = Image.fromarray(converted_img)
     bytes_io = io.BytesIO()
     converted_img.save(bytes_io, format="PNG")
     return Response(bytes_io.getvalue(), media_type="image/png")
 
    
-@app.post("/detection/video/")
-async def post_predict_detector_video(file: UploadFile = File(...), width: int = 1280, height: int = 960, conf: float = 0.7, ckpt_file: str = 'yolor-d6.pt'):
+@app.post("/detection/video/") # conf -> confthres
+async def post_predict_detector_video(file: UploadFile = File(...), width: int = 1280, height: int = 960, confthres: float = 0.7, ckpt_file: str = 'yolor-d6.pt'):
     logger.info(f"Post Succes Video")
     name = f"result.mp4"
     logger.info(f"file: {name}")
@@ -77,7 +78,7 @@ async def post_predict_detector_video(file: UploadFile = File(...), width: int =
         frame_tensor = np_to_tensor(frame, device)
         pred = detector_model(frame_tensor)[0]
         pred = non_max_suppression(pred)[0]
-        frame = drawBoxes(frame, pred, conf) 
+        frame = drawBoxes(frame, pred, confthres) 
 
         end = time.time()
 
