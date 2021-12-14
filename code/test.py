@@ -237,6 +237,10 @@ def test(data,
     # W&B logging
     if plots and wandb:
         print('---')
+        wandb.log({"metrics/precision":mp})
+        wandb.log({"metrics/recall":mr})
+        wandb.log({"metrics/map50":map50})
+        wandb.log({"metrics/map":map})
         wandb.log({"Images": wandb_images})
         wandb.log({"Validation": [wandb.Image(str(x), caption=x.name) for x in sorted(save_dir.glob('test*.jpg'))]})
 
