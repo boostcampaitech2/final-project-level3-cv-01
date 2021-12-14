@@ -8,7 +8,6 @@ WORKDIR /frontend
 RUN apt-get -y update
 RUN apt-get -y upgrade
 
-RUN pip install --upgrade
 RUN pip install -r requirements.txt
 
 EXPOSE 8501

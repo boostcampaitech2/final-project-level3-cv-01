@@ -10,7 +10,6 @@ RUN apt-get -y update
 RUN apt-get -y upgrade
 RUN apt-get install ffmpeg libsm6 libxext6  -y
 
-RUN pip install --upgrade
 RUN pip install -r requirements.txt
 
 EXPOSE 8000
