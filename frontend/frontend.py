@@ -1,15 +1,9 @@
-from turtle import back, width
 import streamlit as st
 
 # from stqdm import stqdm
 
-import io
-from PIL import Image
 import requests
 import time
-import tempfile
-import logging
-import json
 import os
 import sys
 sys.path.append(os.getcwd())
