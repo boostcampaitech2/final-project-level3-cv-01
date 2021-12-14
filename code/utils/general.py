@@ -432,3 +432,15 @@ def increment_path(path, exist_ok=True, sep=''):
         i = [int(m.groups()[0]) for m in matches if m]  # indices
         n = max(i) + 1 if i else 2  # increment number
         return f"{path}{sep}{n}"  # update path
+
+def remove_overlap(iou, priority = 'alone'):
+    if priority == 'alone':
+        iou *= (iou == iou.max(dim=1, keepdim=True)[0])
+        iou *= (iou == iou.max(dim=0, keepdim=True)[0])
+    else :
+        iou *= (iou == iou.max(dim=1, keepdim=True)[0])
+        iou *= (iou == iou.max(dim=0, keepdim=True)[0])
+    return iou
+
+def merge_class(helmet, alone):
+    return 2*alone + helmet
