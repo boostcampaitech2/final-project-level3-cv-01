@@ -5,7 +5,7 @@ import os
 import tempfile
 sys.path.append(os.getcwd())
 import cv2 
-from PIL import Image
+from PIL import Image, ImageOps
 import time
 import utils.SessionState as SessionState
 from random import randint
@@ -36,7 +36,7 @@ def trigger_rerun():
 
 
 device = select_device('')
-model = attempt_load('/opt/ml/final_project/server/w6_side_ap50.pt', map_location=device)
+model = attempt_load('/opt/ml/final_project/real_time_inference/w6_side_ap50.pt', map_location=device)
 
 
 def ProcessImage(image, obj_detector, confidence_threshold, width, height):
@@ -86,9 +86,12 @@ def main():
 
     while True:
         if os.path.exists('test.jpg'):
-            image = Image.open('test.jpg')
-            image = ProcessImage(image, model, confidence_threshold, width, height)
-            stframe.image(image, width = 720)
+            try:
+                image = Image.open('test.jpg')
+                image = ImageOps.exif_transpose(image)
+                stframe.image(image, width = 720)
+            except OSError:
+                continue
         time.sleep(0.2)
 
 
