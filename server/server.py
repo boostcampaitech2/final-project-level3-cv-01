@@ -5,9 +5,13 @@ from server_thread import ServerThread
 from typing import Tuple
 
 
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.connect(("8.8.8.8", 80))
+internal_ip = s.getsockname()[0]
+
 class Server:
     def __init__(self,
-                 address: Tuple[str, int]=('172.17.0.3', 6006)
+                 address: Tuple[str, int]=(internal_ip, 6006)
                  ) -> None:
         self.host, self.port = address
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -22,15 +26,15 @@ class Server:
         while True:
             client_sock, addr = self.socket.accept()
             print(f"Connected by : {addr}")
-            st = ServerThread(self.socket, client_sock, addr)
-            st.start()
+            serverThread = ServerThread(self.socket, client_sock, addr)
+            serverThread.start()
             
             return
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Run Socket Server')
     parser.add_argument(
-        "--ip", default='172.17.0.3', type=str, help="upstage server ip"
+        "--ip", default=internal_ip, type=str, help="upstage server ip"
     )    
     parser.add_argument(
         "--port", default='6006', type=int, help="upstage server port"
