@@ -12,6 +12,6 @@ RUN apt-get -y upgrade
 RUN pip install pip==21.2.4 && \
   pip install -r requirements.txt
 
-EXPOSE 8000
+EXPOSE 8501
     
-CMD ["python", "server.py"]
+CMD ["streamlit", "run", "streamlit-app.py"]
