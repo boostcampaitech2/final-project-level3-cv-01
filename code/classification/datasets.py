@@ -12,6 +12,20 @@ from torch.utils.data import Dataset
 img_formats = ['bmp', 'jpg', 'jpeg', 'png', 'tif', 'tiff', 'dng']  # acceptable image suffixes
 
 
+def create_dataloader(path, img_size, batch_size, workers=8):
+    
+    dataset = ClassificationDataset(path, img_size, batch_size)
+
+    batch_size = min(batch_size, len(dataset))
+    nw = min([os.cpu_count(), batch_size if batch_size > 1 else 0, workers])  # number of workers
+    dataloader = InfiniteDataLoader(dataset,
+                                    batch_size=batch_size,
+                                    num_workers=nw,
+                                    pin_memory=True,
+                                    collate_fn=ClassificationDataset.collate_fn)  # torch.utils.data.DataLoader()
+    return dataloader
+
+
 class ClassificationDataset(Dataset):
     def __init__(self, path):
         def img2label_paths(img_paths):
@@ -86,12 +100,12 @@ class ClassificationDataset(Dataset):
 
         img = crop_image(img, box)
 
-        # r = self.img_size / max(h0, w0)  # resize image to img_size
-        # if r != 1:  # always resize down, only resize up if training with augmentation
-        #     interp = cv2.INTER_AREA if r < 1 and not self.augment else cv2.INTER_LINEAR
-        #     img = cv2.resize(img, (int(w0 * r), int(h0 * r)), interpolation=interp)
-
         return img
+
+    @staticmethod
+    def collate_fn(batch):
+        return tuple(zip(*batch))
+
 
 def crop_image(image, box):
     h0, w0 = image.shape[:2]
@@ -108,3 +122,37 @@ def crop_image(image, box):
     cropped_image = image[lty:rby, ltx:rbx, :]
 
     return cropped_image
+
+
+class InfiniteDataLoader(torch.utils.data.dataloader.DataLoader):
+    """ Dataloader that reuses workers
+
+    Uses same syntax as vanilla DataLoader
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        object.__setattr__(self, 'batch_sampler', _RepeatSampler(self.batch_sampler))
+        self.iterator = super().__iter__()
+
+    def __len__(self):
+        return len(self.batch_sampler.sampler)
+
+    def __iter__(self):
+        for i in range(len(self)):
+            yield next(self.iterator)
+
+
+class _RepeatSampler(object):
+    """ Sampler that repeats forever
+
+    Args:
+        sampler (Sampler)
+    """
+
+    def __init__(self, sampler):
+        self.sampler = sampler
+
+    def __iter__(self):
+        while True:
+            yield from iter(self.sampler)
