@@ -2,13 +2,13 @@ version: "3.9"
 
 services:
 
-  backend:
-    build: backend/
+  server:
+    build: server/
     ports: 
-      - 8000:8000
+      - 6006:6006
 
-  frontend:
-    build: frontend/
+  real_time_frontend:
+    build: real_time_inference/
     depends_on:
       - backend
     ports:
