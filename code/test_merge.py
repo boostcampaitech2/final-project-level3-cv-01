@@ -163,7 +163,7 @@ def test_merge(data,
                 pred[box_i][5] = merge_class(pred_helmet[box_i][5], pred_alone[box_i][5])
 
 
-            if len(pred) == 0:
+            if torch.count_nonzero(pred) == 0:
                 if nl:
                     stats.append((torch.zeros(0, niou, dtype=torch.bool), torch.Tensor(), torch.Tensor(), tcls))
                 continue
