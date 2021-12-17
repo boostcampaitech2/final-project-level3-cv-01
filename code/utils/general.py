@@ -278,6 +278,8 @@ def non_max_suppression(prediction, conf_thres=0.1, iou_thres=0.6, merge=False, 
     time_limit = 10.0  # seconds to quit after
     redundant = True  # require redundant detections
     multi_label = nc > 1  # multiple labels per box (adds 0.5ms/img)
+    # multi_label = False
+
 
     t = time.time()
     output = [torch.zeros(0, 6)] * prediction.shape[0]
@@ -444,3 +446,26 @@ def remove_overlap(iou, priority = 'alone'):
 
 def merge_class(helmet, alone):
     return 2*alone + helmet
+
+
+def merge_pred(pred_helmet, pred_alone, merge_thres=0.5):
+    det = torch.zeros_like(pred_helmet)
+
+    if len(pred_helmet) != 0 and len(pred_alone) != 0:
+        iou = box_iou(pred_helmet[:,:4],pred_alone[:,:4])
+        #iou = remove_overlap(iou)
+        j,k = (iou > merge_thres).nonzero(as_tuple=False).T  
+
+        pred_helmet = pred_helmet[j]
+        pred_alone = pred_alone[k]
+
+        nbox = len(pred_helmet)        
+        for box_i in range(nbox):
+            # todo - box weighted merge
+            if pred_helmet[box_i][4] > pred_alone[box_i][4]:
+                det[box_i][:4] = pred_helmet[box_i][:4]
+            else:
+                det[box_i][:4] = pred_alone[box_i][:4]
+            det[box_i][4] = pred_helmet[box_i][4] * pred_alone[box_i][4]
+            det[box_i][5] = merge_class(pred_helmet[box_i][5], pred_alone[box_i][5])
+    return det
