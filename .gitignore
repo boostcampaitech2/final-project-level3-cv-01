@@ -4,6 +4,10 @@
 
 **/pretrained/
 web/*.pt
+backend/*.pt
 web/*.mp4
+real_time_inference/*.pt
+real_time_inference/*.jpg
+server/*.jpg
 
 **/.ipynb_checkpoints/
