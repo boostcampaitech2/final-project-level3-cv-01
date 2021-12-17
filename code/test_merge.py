@@ -61,7 +61,7 @@ def test_merge(data,
     half = device.type != 'cpu'  # half precision only supported on CUDA
     if half:
         model_helmet.half()
-        model_alone.eval()
+        model_alone.half()
 
     # Configure
     model_helmet.eval()
@@ -69,6 +69,7 @@ def test_merge(data,
 
     with open(data) as f:
         data = yaml.load(f, Loader=yaml.FullLoader)  # model dict
+    check_dataset(data)
 
     nc = 1 if single_cls else int(data['nc'])  # number of classes
     iouv = torch.linspace(0.5, 0.95, 10).to(device)  # iou vector for mAP@0.5:0.95
@@ -141,7 +142,7 @@ def test_merge(data,
                 continue
             
             iou = box_iou(pred_helmet[:,:4],pred_alone[:,:4])
-            iou = remove_overlap(iou)
+            #iou = remove_overlap(iou)
             i,j = (iou > merge_thres).nonzero(as_tuple=False).T  
 
             pred_helmet = pred_helmet[i]
@@ -155,14 +156,14 @@ def test_merge(data,
             for box_i in range(nbox):
                 # todo - box weighted merge
                 if pred_helmet[box_i][4] > pred_alone[box_i][4]:
-                    pred[box_i][:4] = pred_helmet[box_i][4]
+                    pred[box_i][:4] = pred_helmet[box_i][:4]
                 else:
                     pred[box_i][:4] = pred_alone[box_i][:4]
                 pred[box_i][4] = pred_helmet[box_i][4] * pred_alone[box_i][4]
                 pred[box_i][5] = merge_class(pred_helmet[box_i][5], pred_alone[box_i][5])
 
 
-            if len(pred) == 0:
+            if torch.count_nonzero(pred) == 0:
                 if nl:
                     stats.append((torch.zeros(0, niou, dtype=torch.bool), torch.Tensor(), torch.Tensor(), tcls))
                 continue
@@ -336,13 +337,13 @@ if __name__ == '__main__':
     parser.add_argument('--name', default='exp', help='save to project/name')
     parser.add_argument('--entity', type=str, default='perforated_line', help='wandb entity name')
 
-    parser.add_argument('--weights_helmet', nargs='+', type=str, default='runs/train/helmet/weights/best_ap50.pt', help='model.pt path(s)')
+    parser.add_argument('--weights_helmet', nargs='+', type=str, default='runs/train/helmet/weights/best_ap.pt', help='model.pt path(s)')
     parser.add_argument('--weights_alone', nargs='+', type=str, default='runs/train/alone/weights/best_ap50.pt', help='model.pt path(s)')
     parser.add_argument('--data', type=str, default='data/both.yaml', help='*.data path')
 
     parser.add_argument('--conf-thres', type=float, default=0.001, help='object confidence threshold')
-    parser.add_argument('--iou-thres', type=float, default=0.65, help='IOU threshold for NMS')
-    parser.add_argument('--merge-thres',type=float, default=0.65,help='IOU threshold for merging outputs from helmet and alone')
+    parser.add_argument('--iou-thres', type=float, default=0.5, help='IOU threshold for NMS')
+    parser.add_argument('--merge-thres',type=float, default=0.5,help='IOU threshold for merging outputs from helmet and alone')
     parser.add_argument('--task', default='val', help="'val', 'test', 'study'")
 
     parser.add_argument('--single-cls', action='store_true', help='treat as single-class dataset')
