@@ -17,7 +17,12 @@ from utils.general import non_max_suppression
 from utils.torch_utils import select_device
 from utils.prototype import drawBoxes, lookup_checkpoint_files, np_to_tensor
 
+import pytz
+import datetime as dt
+
 device = select_device('')
+KST = pytz.timezone('Asia/Seoul')
+
 
 @st.cache(
     hash_funcs={
@@ -121,16 +126,39 @@ def main():
                 trigger_rerun()
 
 
-def ProcessImage(image, obj_detector, confidence_threshold, width, height):
-    image = np.array(image) #pil to cv
-    image = cv2.resize(image, (width, height))
-    
-    image_tensor = np_to_tensor(image, device)
+def ProcessImage(image_vf, obj_detector, confidence_threshold, width, height):
+    image_np = np.array(image_vf) #pil to cv
+    image_resize = cv2.resize(image_np, (width, height))
+    img = Image.fromarray(image_resize)
+    image_tensor = np_to_tensor(image_resize, device)
 
     pred = obj_detector(image_tensor)[0]
     pred = non_max_suppression(pred)[0]
-    image = drawBoxes(image, pred, confidence_threshold) 
+    image, pred_list = drawBoxes(image_resize, pred, confidence_threshold)
+    now = dt.datetime.now(KST).isoformat()
     st.image(image)
+    for i in pred_list:
+        start = i[0]
+        end = i[1]
+        conf = i[2]
+        label = i[3]
+        crop_resion = (start + end)
+        crop_img = img.crop(crop_resion)
+        if label == 1:
+            st.sidebar.image(crop_img)
+            st.sidebar.write("No Helmet")
+            st.sidebar.write(f"score : {conf:.3f}")
+            st.sidebar.write(f"Time : {now}")
+        elif label == 2:
+            st.sidebar.image(crop_img)
+            st.sidebar.write("Sharing")
+            st.sidebar.write(f"score : {conf:.3f}")
+            st.sidebar.write(f"Time : {now}") 
+        elif label == 3:
+            st.sidebar.image(crop_img)
+            st.sidebar.write("No Helmet & Sharing")
+            st.sidebar.write(f"score : {conf:.3f}")
+            st.sidebar.write(f"Time : {now}")      
 
 
 def ProcessFrames(vf, obj_detector, stop, confidence_threshold, width, height): 
@@ -174,12 +202,36 @@ def ProcessFrames(vf, obj_detector, stop, confidence_threshold, width, height):
             break
         if not ret:
             print("Can't receive frame (stream end?). Exiting ...")
+        img = Image.fromarray(frame)
         frame_tensor = np_to_tensor(frame, device)
         pred = obj_detector(frame_tensor)[0]
         pred = non_max_suppression(pred)[0]
-        frame = drawBoxes(frame, pred, confidence_threshold) 
-
+        frame, pred_list = drawBoxes(frame, pred, confidence_threshold)
+        print(type(frame)) 
         end = time.time()
+        now = dt.datetime.now(KST).isoformat()
+        for i in pred_list:
+            start_p = i[0]
+            end_p = i[1]
+            conf = i[2]
+            label = i[3]
+            crop_resion = (start_p + end_p)
+            crop_img = img.crop(crop_resion)
+            if label == 1:
+                st.sidebar.image(crop_img)
+                st.sidebar.write("No Helmet")
+                st.sidebar.write(f"score : {conf:.3f}")
+                st.sidebar.write(f"Time : {now}")
+            elif label == 2:
+                st.sidebar.image(crop_img)
+                st.sidebar.write("Sharing")
+                st.sidebar.write(f"score : {conf:.3f}")
+                st.sidebar.write(f"Time : {now}") 
+            elif label == 3:
+                st.sidebar.image(crop_img)
+                st.sidebar.write("No Helmet & Sharing")
+                st.sidebar.write(f"score : {conf:.3f}")
+                st.sidebar.write(f"Time : {now}")
 
         frame_counter += 1
         fps_measurement = frame_counter/(end - start)
