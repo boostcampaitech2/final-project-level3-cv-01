@@ -17,37 +17,41 @@ import os
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    
+    parser.add_argument('--video', type=str, default='/opt/ml/final_project/data/video/test1.mp4', help='video path(s)')
     parser.add_argument('--weights', nargs='+', type=str, default='yolor-p6.pt', help='model.pt path(s)')
     #parser.add_argument('--source', type=str, default='inference/images', help='source')  # file/folder, 0 for webcam
     parser.add_argument('--img-size', type=int, default=512, help='inference size (pixels)')
-    parser.add_argument('--conf-thres', type=float, default=0.25, help='object confidence threshold')
-    parser.add_argument('--iou-thres', type=float, default=0.45, help='IOU threshold for NMS')
+    parser.add_argument('--conf-thres', type=float, default=0.5, help='object confidence threshold')
+    parser.add_argument('--iou-thres', type=float, default=0.5, help='IOU threshold for NMS')
     parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
+    
+    # inference result
     parser.add_argument('--view-img', action='store_true', help='display results')
     parser.add_argument('--save-txt', action='store_true', help='save results to *.txt')
     parser.add_argument('--save-conf', action='store_true', help='save confidences in --save-txt labels')
+    
+    # nms
     parser.add_argument('--classes', nargs='+', type=int, help='filter by class: --class 0, or --class 0 2 3')
     parser.add_argument('--agnostic-nms', action='store_true', help='class-agnostic NMS')
     parser.add_argument('--augment', action='store_true', help='augmented inference')
-    parser.add_argument('--update', action='store_true', help='update all models')
-    parser.add_argument('--project', default='baek/output', help='save results to project/name')
-    #parser.add_argument('--name', default='exp', help='save results to project/name')
+    
+    parser.add_argument('--project', default='runs/video', help='save results to project/name')
+    parser.add_argument('--name', default='exp', help='save results to project/name')
     parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
     opt = parser.parse_args()
     print(opt)
 
     '''
-    사용법은 python save_video2img.py --device 0 --conf {conf} --iou {iou} --weights {pt_file}
-    이런 식으로 하시면 되고, 영상은 video_cap에 위치 지정해 주시면 됩니다. 
-    그리고, --project 로 parser 주셔도 되고, 아니면 default값에 직접 적어주시면 됩니다.
-    그리고 아래에서 한 번 더 설명하겠습니다.
+    사용법은 python save_video2img.py --video {video path} --weights {pt_file} --conf {conf} --iou {iou} --device 0 --project {save directory} --name {exp name}
+
+    project/name/input - video를 frame 단위로 바꾼 image가 저장되고
+    project/name/output - input image를 Inference한 image가 저장됩니다.
     
     주석 처리한 video_cap.set(~~~)은 적용 안되는 것 같습니다. 혹시나 실행하실때 에러 뜨신다면 주석 풀어주세요.
-    
-    아 그리고, 미리 default 경로에 들어갈 ~~~/output 폴더를 미리 만들어주세요!
     '''
 
-    video_cap = cv2.VideoCapture('D://T2247_Otimizer_Backup/Yolor/test3.MP4')
+    video_cap = cv2.VideoCapture(opt.video)
     # video_cap.set(cv2.CAP_PROP_FRAME_WIDTH,512)
     # video_cap.set(cv2.CAP_PROP_FRAME_HEIGHT,512)
 
@@ -60,7 +64,10 @@ if __name__ == '__main__':
     print('==End Loading==')
 
     weights, view_img, save_txt, imgsz = opt.weights, opt.view_img, opt.save_txt, opt.img_size
-    save_dir = Path(opt.project)
+    
+    save_dir = Path(increment_path(Path(opt.project) / opt.name, exist_ok=opt.exist_ok))
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
 
     # Initialize
     set_logging()
@@ -69,7 +76,6 @@ if __name__ == '__main__':
 
     # Load model
     model = attempt_load(weights, map_location=device)  # load FP32 model
-
     imgsz = check_img_size(imgsz, s=model.stride.max())  # check img_size
     if half:
         model.half()  # to FP16
@@ -82,16 +88,15 @@ if __name__ == '__main__':
     #          초록,       빨강,     파랑,      검정  
     colors = [[0,255,0],[255,0,0],[0,0,255],[0,0,0]]
     
-    '''
-    이 부분에서 path_img 경로에 직접 영상 프레임별로 input으로 들어가게 되고, 
-    위에서 설정한 --project 경로에 처리한 이미지가 저장됩니다. 
-    output_path_img는 아마 쓰지 않는 것으로 기억하고 있습니다.
-    이게 directory내에 이미지 지워줄려고 쓰는 걸로 기억합니다.
-    '''
-    
+
     cnt = 0
-    path_img = 'D://T2247_Otimizer_Backup/Yolor/baek/input/'
-    output_path_img = 'D://T2247_Otimizer_Backup/Yolor/baek/output/'
+    path_img = str(save_dir / 'input')
+    output_path_img = Path(str(save_dir / 'output'))
+    if not os.path.exists(path_img):
+        os.makedirs(path_img)
+    if not os.path.exists(output_path_img):
+        os.makedirs(output_path_img)
+    
     while True:
         check, frame = video_cap.read()
         
@@ -103,18 +108,9 @@ if __name__ == '__main__':
         h,w = int(frame.shape[0]/2), int(frame.shape[1]/2)
         
         frame = cv2.resize(frame,(w,h))
-        cv2.imwrite(path_img + 'video' + str(cnt).zfill(6) + '.jpg', frame)
+        cv2.imwrite(path_img + '/video' + str(cnt).zfill(6) + '.jpg', frame)
         #detect(path_img,cnt)
-
-
-        source = path_img + 'video' + str(cnt).zfill(6) + '.jpg'
-
-
-        # Second-stage classifier
-        classify = False
-        if classify:
-            modelc = load_classifier(name='resnet101', n=2)  # initialize
-            modelc.load_state_dict(torch.load('weights/resnet101.pt', map_location=device)['model']).to(device).eval()
+        source = path_img + '/video' + str(cnt).zfill(6) + '.jpg'
 
         # Set Dataloader
         save_img = True
@@ -145,15 +141,13 @@ if __name__ == '__main__':
             pred = non_max_suppression(pred, opt.conf_thres, opt.iou_thres, classes=opt.classes, agnostic=opt.agnostic_nms)
             t2 = time_synchronized()
 
-            # Apply Classifier
-            if classify:
-                pred = apply_classifier(pred, modelc, img, im0s)
-
             # Process detections
             for i, det in enumerate(pred):  # detections per image
                 p, s, im0 = Path(path), '', im0s
-                #save_path = str(save_dir / p.name)
-                save_path = str(save_dir / p.name)
+                save_path = str(output_path_img / p.name)
+                txt_dir = str(save_dir / 'labels')
+                if not os.path.exists(txt_dir):
+                    os.makedirs(txt_dir)
                 txt_path = str(save_dir / 'labels' / p.stem) + ('_%g' % dataset.frame if dataset.mode == 'video' else '')
                 s += '%gx%g ' % img.shape[2:]  # print string
                 gn = torch.tensor(im0.shape)[[1, 0, 1, 0]]  # normalization gain whwh
@@ -174,33 +168,30 @@ if __name__ == '__main__':
                             with open(txt_path + '.txt', 'a') as f:
                                 f.write(('%g ' * len(line)).rstrip() % line + '\n')
 
-                        if save_img or view_img:  # Add bbox to image
-                            label = '%s %.2f' % (names[int(cls)], conf)
-                            plot_one_box(xyxy, im0, label=label, color=colors[int(cls)], line_thickness=3)
+                        
+                        label = '%s %.2f' % (names[int(cls)], conf)
+                        plot_one_box(xyxy, im0, label=label, color=colors[int(cls)], line_thickness=3)
 
                 # Print time (inference + NMS)
                 print('%sDone. (%.3fs)' % (s, t2 - t1))
 
 
                 # Save results (image with detections)
-                if save_img:
-                    if dataset.mode == 'images':
-                        im0 = cv2.resize(im0,(w,h))
-                        cv2.imwrite(save_path, im0)
-                    else:
-                        if vid_path != save_path:  # new video
-                            vid_path = save_path
-                            if isinstance(vid_writer, cv2.VideoWriter):
-                                vid_writer.release()  # release previous video writer
+                if dataset.mode == 'images':
+                    im0 = cv2.resize(im0,(w,h))
+                    cv2.imwrite(save_path, im0)
+                else:
+                    if vid_path != save_path:  # new video
+                        vid_path = save_path
+                        if isinstance(vid_writer, cv2.VideoWriter):
+                            vid_writer.release()  # release previous video writer
 
-                            fourcc = 'mp4v'  # output video codec
-                            fps = vid_cap.get(cv2.CAP_PROP_FPS)
-                            vid_writer = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*fourcc), fps, (w, h))
-                        vid_writer.write(im0)
+                        fourcc = 'mp4v'  # output video codec
+                        fps = vid_cap.get(cv2.CAP_PROP_FPS)
+                        vid_writer = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*fourcc), fps, (w, h))
+                    vid_writer.write(im0)
                 
-                view_img = True
                 # Stream results
-                
                 if view_img:
                     img_output = cv2.imread(save_path)
                     #cv2.imshow(save_path, im0)
@@ -208,9 +199,6 @@ if __name__ == '__main__':
                     if cv2.waitKey(1) == ord('q'):  # q to quit
                         raise StopIteration
                     #cv2.destroyAllWindows()
-
-
-
 
         #os.remove(output_path_img + 'video' + str(cnt).zfill(6) + '.jpg')
         #os.remove(path_img + 'video' + str(cnt).zfill(6) + '.jpg')
