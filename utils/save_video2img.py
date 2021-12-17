@@ -90,6 +90,7 @@ if __name__ == '__main__':
     
 
     cnt = 0
+    end_ = 0
     path_img = str(save_dir / 'input')
     output_path_img = Path(str(save_dir / 'output'))
     if not os.path.exists(path_img):
@@ -102,8 +103,13 @@ if __name__ == '__main__':
         
         # 이 부분은 영상에서 프레임이 None값으로 들어올 때가 있어서 체크합니다.
         if check == False:
+            if end_ >= 50:
+                break
+            else:
+                end_ += 1
             continue
-            
+        
+        end_ = 0
         # 이 부분에서 width, heights 크기 조절 합니다.
         h,w = int(frame.shape[0]/2), int(frame.shape[1]/2)
         
