@@ -431,28 +431,28 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                 torch.save(ckpt, last)
                 if best_fitness == fi:
                     torch.save(ckpt, best)
-                if (best_fitness == fi) and (epoch >= (200)):
-                    torch.save(ckpt, wdir / 'best_{:03d}.pt'.format(epoch))
-                if best_fitness == fi:
-                    torch.save(ckpt, wdir / 'best_overall.pt')
+                # if (best_fitness == fi) and (epoch >= (200)):
+                #     torch.save(ckpt, wdir / 'best_{:03d}.pt'.format(epoch))
+                # if best_fitness == fi:
+                #     torch.save(ckpt, wdir / 'best_overall.pt')
                 if best_fitness_p == fi_p:
                     torch.save(ckpt, wdir / 'best_p.pt')
                 if best_fitness_r == fi_r:
                     torch.save(ckpt, wdir / 'best_r.pt')
                 if best_fitness_ap50 == fi_ap50:
                     torch.save(ckpt, wdir / 'best_ap50.pt')
-                if best_fitness_ap == fi_ap:
-                    torch.save(ckpt, wdir / 'best_ap.pt')
-                if best_fitness_f == fi_f:
-                    torch.save(ckpt, wdir / 'best_f.pt')
-                if epoch == 0:
-                    torch.save(ckpt, wdir / 'epoch_{:03d}.pt'.format(epoch))
-                if ((epoch+1) % 25) == 0:
-                    torch.save(ckpt, wdir / 'epoch_{:03d}.pt'.format(epoch))
-                if epoch >= (epochs-5):
-                    torch.save(ckpt, wdir / 'last_{:03d}.pt'.format(epoch))
-                elif epoch >= 420:
-                    torch.save(ckpt, wdir / 'last_{:03d}.pt'.format(epoch))
+                # if best_fitness_ap == fi_ap:
+                #     torch.save(ckpt, wdir / 'best_ap.pt')
+                # if best_fitness_f == fi_f:
+                #     torch.save(ckpt, wdir / 'best_f.pt')
+                # if epoch == 0:
+                #     torch.save(ckpt, wdir / 'epoch_{:03d}.pt'.format(epoch))
+                # if ((epoch+1) % 25) == 0:
+                #     torch.save(ckpt, wdir / 'epoch_{:03d}.pt'.format(epoch))
+                # if epoch >= (epochs-5):
+                #     torch.save(ckpt, wdir / 'last_{:03d}.pt'.format(epoch))
+                # elif epoch >= 420:
+                #     torch.save(ckpt, wdir / 'last_{:03d}.pt'.format(epoch))
                 del ckpt
         # end epoch ----------------------------------------------------------------------------------------------------
     # end training

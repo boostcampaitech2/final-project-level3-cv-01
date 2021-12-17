@@ -11,3 +11,5 @@ real_time_inference/*.jpg
 server/*.jpg
 
 **/.ipynb_checkpoints/
+
+data/**
