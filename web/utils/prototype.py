@@ -12,6 +12,7 @@ def DetermineBoxCenter(box):
 
 
 def drawBoxes(frame, pred, thres = 0.2): # thres 조절 추가 예정
+    pred_list = []
     pred = pred.to('cpu')
     boxColor = {
         0: (128, 255, 0), # 헬멧O 혼자O 초록색
@@ -37,12 +38,13 @@ def drawBoxes(frame, pred, thres = 0.2): # thres 조절 추가 예정
         x1, y1, x2, y2, conf = int(x1), int(y1), int(x2), int(y2), float(conf) # tensor to int or float
         start_coord = (x1, y1)
         end_coord = (x2, y2)
+        pred_list.append([start_coord, end_coord, conf, lbl])
         # text to be included to the output image
         txt = f'{className[lbl]} ({round(conf, 3)})'
         frame = cv2.rectangle(frame, start_coord, end_coord, boxColor[lbl], boxThickness)
         frame = cv2.putText(frame, txt, start_coord, cv2.FONT_HERSHEY_SIMPLEX, 0.5, TextColor, 2)
 
-    return frame
+    return frame, pred_list
     
 
 def lookup_checkpoint_files():
