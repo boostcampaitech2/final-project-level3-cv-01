@@ -50,16 +50,38 @@ def ProcessImage(image, obj_detector, confidence_threshold, width, height):
     output: 박스친 이미지, label의 배열
     '''
 
-    image = np.array(image) #pil to cv
-    image = cv2.resize(image, (width, height))
-    
-    image_tensor = np_to_tensor(image, device)
+    image_np = np.array(image) #pil to cv
+    image_resize = cv2.resize(image_np, (width, height))
+    img = Image.fromarray(image_resize)
+    image_tensor = np_to_tensor(image_resize, device)
 
     pred = obj_detector(image_tensor)[0]
     pred = non_max_suppression(pred)[0]
-    labels = list(map(lambda x: x[5], list(filter(lambda x: x[4] > confidence_threshold, pred)))) # confthres를 넘은 label들
-    image = drawBoxes(image, pred, confidence_threshold) 
-    return image, labels
+    image, pred_list = drawBoxes(image, pred, confidence_threshold)
+    now = dt.datetime.now(KST).isoformat().split('.')[0]
+    for i in pred_list:
+        start = i[0]
+        end = i[1]
+        conf = i[2]
+        label = i[3]
+        crop_resion = (start + end)
+        crop_img = img.crop(crop_resion)
+        if label == 1:
+            st.sidebar.image(crop_img)
+            st.sidebar.write("No Helmet")
+            st.sidebar.write(f"score : {conf:.3f}")
+            st.sidebar.write(f"Time : {now}")
+        elif label == 2:
+            st.sidebar.image(crop_img)
+            st.sidebar.write("Sharing")
+            st.sidebar.write(f"score : {conf:.3f}")
+            st.sidebar.write(f"Time : {now}") 
+        elif label == 3:
+            st.sidebar.image(crop_img)
+            st.sidebar.write("No Helmet & Sharing")
+            st.sidebar.write(f"score : {conf:.3f}")
+            st.sidebar.write(f"Time : {now}")   
+    return image
 
 
 def main():
@@ -79,20 +101,9 @@ def main():
             try:
                 image = Image.open('test.jpg')
                 image = ImageOps.exif_transpose(image) # pil은 자동으로 이미지를 가로가 길도록 돌려버리는데 이를 방지하는 코드
-                image, labels = ProcessImage(image, model, 0.9, 512, 512)
+                image = ProcessImage(image, model, 0.9, 512, 512)
                 stframe.image(image, width = 720)
-                now = dt.datetime.now(KST).isoformat()
 
-                # DB를 연결할 것이라면 여기서 처리
-                if 1 in labels:
-                    st.sidebar.image(image)
-                    st.sidebar.write(f"No Helmet {now}")
-                elif 2 in labels:
-                    st.sidebar.image(image)
-                    st.sidebar.write(f"Sharing {now}")
-                elif 3 in labels:
-                    st.sidebar.image(image)
-                    st.sidebar.write(f"Sharing {now}")
             except OSError:
                 continue
         time.sleep(0.2)
