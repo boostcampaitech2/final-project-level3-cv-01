@@ -135,7 +135,7 @@ def ProcessImage(image_vf, obj_detector, confidence_threshold, width, height):
     pred = obj_detector(image_tensor)[0]
     pred = non_max_suppression(pred)[0]
     image, pred_list = drawBoxes(image_resize, pred, confidence_threshold)
-    now = dt.datetime.now(KST).isoformat()
+    now = dt.datetime.now(KST).isoformat().split('.')[0]
     st.image(image)
     for i in pred_list:
         start = i[0]
