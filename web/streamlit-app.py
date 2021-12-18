@@ -13,7 +13,7 @@ from random import randint
 from streamlit.server.server import Server
 
 from models.experimental import attempt_load
-from utils.general import non_max_suppression
+from utils.general import non_max_suppression, merge_pred
 from utils.torch_utils import select_device
 from utils.prototype import drawBoxes, lookup_checkpoint_files, np_to_tensor
 
@@ -131,17 +131,26 @@ def main():
                     os.remove(filepath)
                 if os.path.exists(filepath_h264):
                     os.remove(filepath_h264)
+                
+                if ckpt_file == 'merge':
+                    model_helmet = attempt_load('checkpoint/helmet_ver3_ap50.pt',map_location=device)
+                    model_alone = attempt_load('checkpoint/alone_ver2.1_ap.pt',map_location=device)
+                    
+                    if isinstance(vf, cv2.VideoCapture):                       
+                        ProcessFramesMerge(vf, model_helmet, model_alone, stop_button, confidence_threshold, width, height, current_frame)
+                    else:
+                        ProcessImageMerge(vf, model_helmet, model_alone, confidence_threshold, width, height)
 
-                model = attempt_load(f'{ckpt_file}', map_location=device)
-
-                if isinstance(vf, cv2.VideoCapture):                       
-                    ProcessFrames(vf, model, stop_button, confidence_threshold, width, height, current_frame)
                 else:
-                    ProcessImage(vf, model, confidence_threshold, width, height)
+                    model = attempt_load(f'checkpoint/{ckpt_file}', map_location=device)
+
+                    if isinstance(vf, cv2.VideoCapture):                       
+                        ProcessFrames(vf, model, stop_button, confidence_threshold, width, height, current_frame)
+                    else:
+                        ProcessImage(vf, model, confidence_threshold, width, height)
             else:
                 state.run = True
                 trigger_rerun()
-
 
 def ProcessImage(image_vf, obj_detector, confidence_threshold, width, height):
     image_np = np.array(image_vf) #pil to cv
@@ -225,6 +234,148 @@ def ProcessFrames(vf, obj_detector, stop, confidence_threshold, width, height, c
         frame_tensor = np_to_tensor(frame, device)
         pred = obj_detector(frame_tensor)[0]
         pred = non_max_suppression(pred)[0]
+        frame, pred_list = drawBoxes(frame, pred, confidence_threshold)
+        cvt_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        current_frame.image(cvt_frame)
+        print(type(frame)) 
+        end = time.time()
+        now = dt.datetime.now(KST).isoformat()
+        for i in pred_list:
+            start_p = i[0]
+            end_p = i[1]
+            conf = i[2]
+            label = i[3]
+            crop_resion = (start_p + end_p)
+            crop_img = img.crop(crop_resion)
+            # crop_img = crop_img.convert("BGR")
+            if label == 1:
+                st.sidebar.image(crop_img, use_column_width='always')
+                st.sidebar.write("No Helmet")
+                st.sidebar.write(f"score : {conf:.3f}")
+                st.sidebar.write(f"Time : {now}")
+            elif label == 2:
+                st.sidebar.image(crop_img, use_column_width='always')
+                st.sidebar.write("Sharing")
+                st.sidebar.write(f"score : {conf:.3f}")
+                st.sidebar.write(f"Time : {now}") 
+            elif label == 3:
+                st.sidebar.image(crop_img, use_column_width='always')
+                st.sidebar.write("No Helmet & Sharing")
+                st.sidebar.write(f"score : {conf:.3f}")
+                st.sidebar.write(f"Time : {now}")
+
+        frame_counter += 1
+        fps_measurement = frame_counter/(end - start)
+        fps_meas_txt.markdown(f'**Frames per second:** {fps_measurement:.2f}')
+        bar.progress(frame_counter/num_frames)        
+        video_writer.write(frame)
+
+    video_writer.release()    
+    print('finish!')
+    with st.spinner(text="Detecting Finished! Converting Video Codec..."):
+        os.system("ffmpeg -i result.mp4 -vcodec libx264 result_h264.mp4 -y")
+    video_file = open("result_h264.mp4", 'rb')
+    video_bytes = video_file.read()
+    processing_discript.empty()
+    current_frame.empty()
+    st.video(video_bytes)
+    st.write("되돌아가시려면 사이드바 메뉴에서 아무거나 선택하세요.")
+
+
+def ProcessImageMerge(image_vf, helmet_detector, alone_detector, confidence_threshold, width, height):
+    image_np = np.array(image_vf) #pil to cv
+    image_resize = cv2.resize(image_np, (width, height))
+    img = Image.fromarray(image_resize)
+    image_tensor = np_to_tensor(image_resize, device)
+
+    pred_helmet = helmet_detector(image_tensor)[0]
+    pred_alone = alone_detector(image_tensor)[0]
+
+    pred_helmet = non_max_suppression(pred_helmet)[0]
+    pred_alone = non_max_suppression(pred_alone)[0]
+
+    pred = merge_pred(pred_helmet, pred_alone, merge_thres=0.5)
+    image, pred_list = drawBoxes(image_resize, pred, confidence_threshold)
+    now = dt.datetime.now(KST).isoformat().split('.')[0]
+    st.image(image)
+    for i in pred_list:
+        start = i[0]
+        end = i[1]
+        conf = i[2]
+        label = i[3]
+        crop_resion = (start + end)
+        crop_img = img.crop(crop_resion)
+        if label == 1:
+            st.sidebar.image(crop_img)
+            st.sidebar.write("No Helmet")
+            st.sidebar.write(f"score : {conf:.3f}")
+            st.sidebar.write(f"Time : {now}")
+        elif label == 2:
+            st.sidebar.image(crop_img)
+            st.sidebar.write("Sharing")
+            st.sidebar.write(f"score : {conf:.3f}")
+            st.sidebar.write(f"Time : {now}") 
+        elif label == 3:
+            st.sidebar.image(crop_img)
+            st.sidebar.write("No Helmet & Sharing")
+            st.sidebar.write(f"score : {conf:.3f}")
+            st.sidebar.write(f"Time : {now}")      
+
+
+def ProcessFramesMerge(vf, helmet_detector, alone_detector, stop, confidence_threshold, width, height, current_frame): 
+    """
+        main loop for processing video file:
+        Params
+        vf = VideoCapture Object
+        obj_detector = Object detector (model and some properties) 
+    """
+    try:
+        num_frames = int(vf.get(cv2.CAP_PROP_FRAME_COUNT))
+        fps = int(vf.get(cv2.CAP_PROP_FPS)) 
+        print('Total number of frames to be processed:', num_frames,
+        '\nFrame rate (frames per second):', fps)
+    except:
+        print('We cannot determine number of frames and FPS!')
+
+
+    frame_counter = 0
+    processing_discript = st.empty()
+    processing_discript.write("👆처리중인 영상의 모습입니다.")
+    _stop = stop.button("stop")
+    fps_meas_txt = st.empty()
+    bar = st.progress(frame_counter)
+    start = time.time()
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v') # output video codec
+    video_writer = cv2.VideoWriter(
+                            "result.mp4", fourcc, fps, (width, height)
+                        ) # Warning: 마지막 파라미터(이미지 크기 예:(1280, 960))가 안 맞으면 동영상이 저장이 안 됨!
+
+    while vf.isOpened():
+        # if frame is read correctly ret is True
+        ret, frame = vf.read()
+        try:
+            frame = cv2.resize(frame, (width, height))
+        except: 
+            print('resize failed :', frame_counter)
+            if frame_counter/num_frames == 1:
+                break
+            continue
+
+        if _stop:
+            break
+        if not ret:
+            print("Can't receive frame (stream end?). Exiting ...")
+        img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+        frame_tensor = np_to_tensor(frame, device)
+
+        pred_helmet = helmet_detector(frame_tensor)[0]
+        pred_alone = alone_detector(frame_tensor)[0]
+
+        pred_helmet = non_max_suppression(pred_helmet)[0]
+        pred_alone = non_max_suppression(pred_alone)[0]
+        
+        pred = merge_pred(pred_helmet, pred_alone, merge_thres=0.5)
+
         frame, pred_list = drawBoxes(frame, pred, confidence_threshold)
         cvt_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         current_frame.image(cvt_frame)
