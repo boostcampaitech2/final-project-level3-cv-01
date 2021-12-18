@@ -44,15 +44,29 @@ def trigger_rerun():
 
 
 def main():
-    st.set_page_config(page_title = "안전모 미착용, 승차인원 초과 멈춰~!", 
+    st.set_page_config(page_title = "PM 위법행위 감지 시스템", 
     page_icon=":scooter:")
 
     state = SessionState.get(upload_key = None, enabled = True, start = False, conf = 70, nms = 50, run = False)
+
+    st.title("PM 위법행위 감지 시스템")
+    st.write("영상에서 헬멧 미착용, 승차인원 초과행위를 탐지하는 시스템 입니다.")
+
+    how_to = st.empty()
+    with how_to.container():
+        st.write(" ")
+        st.write("- 사용법 : 왼쪽에서 옵션 설정 후 이미지 혹은 영상을 아래에 넣은 후 업로드가 완료되면 start 버튼을 누르세요.")
+        st.subheader("사이드바 메뉴")
+        st.write("- Checkpoint file : 체크포인트 파일을 선택합니다. 선택하신 체크포인트 파일 기반으로 yolor 모델을 불러와 inference 합니다.")
+        st.write("- Confidense score threshold : bound box를 표시할 threshold입니다. 높을수록 confidence score가 높은 객체만 박스를 칩니다.")
+        st.write("- result resolution : 결과 이미지 혹은 동영상의 해상도를 선택합니다.")
+
 
     upload = st.empty()
     start_button = st.empty()
     stop_button = st.empty()
 
+    current_frame = st.empty()
 
     with upload:
         f = st.file_uploader('Upload Image or Video file', key = state.upload_key)
@@ -73,19 +87,20 @@ def main():
         
         result_resolution = st.sidebar.radio(
             "select result video resolution",
-            ("1280 x 960",)
+            ("512 x 512", "1280 x 960",)
         )
 
         if result_resolution == "1280 x 960":
             width, height = 1280, 960
-        elif result_resolution == "640 x 480":
-            width, height = 640, 480
+        elif result_resolution == "512 x 512":
+            width, height = 512, 512
     
     filepath = '/opt/ml/final_project/web/result.mp4'
     filepath_h264 = '/opt/ml/final_project/web/result_264.mp4'
 
     if f is not None:
-
+        how_to.empty()
+        st.sidebar.subheader("잡았다 요놈!")
         tfile = tempfile.NamedTemporaryFile(delete = False)
         tfile.write(f.read())  
         upload.empty()
@@ -118,7 +133,7 @@ def main():
                 model = attempt_load(f'/opt/ml/final_project/web/{ckpt_file}', map_location=device)
 
                 if isinstance(vf, cv2.VideoCapture):                       
-                    ProcessFrames(vf, model, stop_button, confidence_threshold, width, height)
+                    ProcessFrames(vf, model, stop_button, confidence_threshold, width, height, current_frame)
                 else:
                     ProcessImage(vf, model, confidence_threshold, width, height)
             else:
@@ -161,7 +176,7 @@ def ProcessImage(image_vf, obj_detector, confidence_threshold, width, height):
             st.sidebar.write(f"Time : {now}")      
 
 
-def ProcessFrames(vf, obj_detector, stop, confidence_threshold, width, height): 
+def ProcessFrames(vf, obj_detector, stop, confidence_threshold, width, height, current_frame): 
     """
         main loop for processing video file:
         Params
@@ -178,6 +193,8 @@ def ProcessFrames(vf, obj_detector, stop, confidence_threshold, width, height):
 
 
     frame_counter = 0
+    processing_discript = st.empty()
+    processing_discript.write("👆처리중인 영상의 모습입니다.")
     _stop = stop.button("stop")
     fps_meas_txt = st.empty()
     bar = st.progress(frame_counter)
@@ -207,6 +224,8 @@ def ProcessFrames(vf, obj_detector, stop, confidence_threshold, width, height):
         pred = obj_detector(frame_tensor)[0]
         pred = non_max_suppression(pred)[0]
         frame, pred_list = drawBoxes(frame, pred, confidence_threshold)
+        cvt_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        current_frame.image(cvt_frame)
         print(type(frame)) 
         end = time.time()
         now = dt.datetime.now(KST).isoformat()
@@ -217,6 +236,7 @@ def ProcessFrames(vf, obj_detector, stop, confidence_threshold, width, height):
             label = i[3]
             crop_resion = (start_p + end_p)
             crop_img = img.crop(crop_resion)
+            # crop_img = crop_img.convert("BGR")
             if label == 1:
                 st.sidebar.image(crop_img)
                 st.sidebar.write("No Helmet")
@@ -242,9 +262,11 @@ def ProcessFrames(vf, obj_detector, stop, confidence_threshold, width, height):
     video_writer.release()    
     print('finish!')
     with st.spinner(text="Detecting Finished! Converting Video Codec..."):
-        os.system("ffmpeg -i /opt/ml/final_project/web/result.mp4 -vcodec libx264 /opt/ml/final_project/web/result_h264.mp4")
+        os.system("ffmpeg -i /opt/ml/final_project/web/result.mp4 -vcodec libx264 /opt/ml/final_project/web/result_h264.mp4 -y")
     video_file = open("/opt/ml/final_project/web/result_h264.mp4", 'rb')
     video_bytes = video_file.read()
+    processing_discript.empty()
+    current_frame.empty()
     st.video(video_bytes)
 
 

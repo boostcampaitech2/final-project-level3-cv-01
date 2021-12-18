@@ -1,31 +1,10 @@
-# pip install -qr requirements.txt
-
-# base ----------------------------------------
-Cython
-matplotlib>=3.2.2
-numpy>=1.18.5
-opencv-python>=4.1.2
-Pillow
-PyYAML>=5.3.1
-scipy>=1.4.1
-tensorboard>=1.5
-torch
-torchvision
-tqdm>=4.41.0
-
-# logging -------------------------------------
-wandb
-
-# plotting ------------------------------------
-seaborn>=0.11.0
-pandas
-
-# export --------------------------------------
-# coremltools>=4.1
-# onnx>=1.8.1
-# scikit-learn==0.19.2  # for coreml quantization
-
-# extras --------------------------------------
-thop  # FLOPS computation
-pycocotools # COCO mAP
-streamlit
+streamlit==1.2.0
+numpy==1.21.4
+torch==1.10.0
+scipy==1.7.3
+tqdm==4.62.3
+opencv-python==4.5.4.60
+Pillow==8.4.0
+torchvision==0.11.1
+matplotlib==3.5.0
+PyYAML==6.0
