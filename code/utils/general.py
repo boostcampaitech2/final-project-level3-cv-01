@@ -449,8 +449,6 @@ def merge_class(helmet, alone):
 
 
 def merge_pred(pred_helmet, pred_alone, merge_thres=0.5):
-    det = torch.zeros_like(pred_helmet)
-
     if len(pred_helmet) != 0 and len(pred_alone) != 0:
         iou = box_iou(pred_helmet[:,:4],pred_alone[:,:4])
         #iou = remove_overlap(iou)
@@ -459,7 +457,9 @@ def merge_pred(pred_helmet, pred_alone, merge_thres=0.5):
         pred_helmet = pred_helmet[j]
         pred_alone = pred_alone[k]
 
-        nbox = len(pred_helmet)        
+        nbox = len(pred_helmet)
+
+        det = torch.zeros_like(pred_helmet)
         for box_i in range(nbox):
             # todo - box weighted merge
             if pred_helmet[box_i][4] > pred_alone[box_i][4]:
@@ -468,4 +468,7 @@ def merge_pred(pred_helmet, pred_alone, merge_thres=0.5):
                 det[box_i][:4] = pred_alone[box_i][:4]
             det[box_i][4] = pred_helmet[box_i][4] * pred_alone[box_i][4]
             det[box_i][5] = merge_class(pred_helmet[box_i][5], pred_alone[box_i][5])
-    return det
+
+        return det
+    else:
+        return torch.zeros_like(pred_helmet)
