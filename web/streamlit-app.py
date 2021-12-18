@@ -221,7 +221,7 @@ def ProcessFrames(vf, obj_detector, stop, confidence_threshold, width, height, c
             break
         if not ret:
             print("Can't receive frame (stream end?). Exiting ...")
-        img = Image.fromarray(frame)
+        img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
         frame_tensor = np_to_tensor(frame, device)
         pred = obj_detector(frame_tensor)[0]
         pred = non_max_suppression(pred)[0]
@@ -240,17 +240,17 @@ def ProcessFrames(vf, obj_detector, stop, confidence_threshold, width, height, c
             crop_img = img.crop(crop_resion)
             # crop_img = crop_img.convert("BGR")
             if label == 1:
-                st.sidebar.image(crop_img)
+                st.sidebar.image(crop_img, use_column_width='always')
                 st.sidebar.write("No Helmet")
                 st.sidebar.write(f"score : {conf:.3f}")
                 st.sidebar.write(f"Time : {now}")
             elif label == 2:
-                st.sidebar.image(crop_img)
+                st.sidebar.image(crop_img, use_column_width='always')
                 st.sidebar.write("Sharing")
                 st.sidebar.write(f"score : {conf:.3f}")
                 st.sidebar.write(f"Time : {now}") 
             elif label == 3:
-                st.sidebar.image(crop_img)
+                st.sidebar.image(crop_img, use_column_width='always')
                 st.sidebar.write("No Helmet & Sharing")
                 st.sidebar.write(f"score : {conf:.3f}")
                 st.sidebar.write(f"Time : {now}")
@@ -270,6 +270,7 @@ def ProcessFrames(vf, obj_detector, stop, confidence_threshold, width, height, c
     processing_discript.empty()
     current_frame.empty()
     st.video(video_bytes)
+    st.write("되돌아가시려면 사이드바 메뉴에서 아무거나 선택하세요.")
 
 
 main()
