@@ -96,8 +96,8 @@ def main():
         elif result_resolution == "512 x 512":
             width, height = 512, 512
     
-    filepath = '/opt/ml/final_project/web/result.mp4'
-    filepath_h264 = '/opt/ml/final_project/web/result_264.mp4'
+    filepath = 'result.mp4'
+    filepath_h264 = 'result_264.mp4'
 
     if f is not None:
         how_to.empty()
@@ -132,7 +132,7 @@ def main():
                 if os.path.exists(filepath_h264):
                     os.remove(filepath_h264)
 
-                model = attempt_load(f'/opt/ml/final_project/web/{ckpt_file}', map_location=device)
+                model = attempt_load(f'{ckpt_file}', map_location=device)
 
                 if isinstance(vf, cv2.VideoCapture):                       
                     ProcessFrames(vf, model, stop_button, confidence_threshold, width, height, current_frame)
@@ -203,7 +203,7 @@ def ProcessFrames(vf, obj_detector, stop, confidence_threshold, width, height, c
     start = time.time()
     fourcc = cv2.VideoWriter_fourcc(*'mp4v') # output video codec
     video_writer = cv2.VideoWriter(
-                            "/opt/ml/final_project/web/result.mp4", fourcc, fps, (width, height)
+                            "result.mp4", fourcc, fps, (width, height)
                         ) # Warning: 마지막 파라미터(이미지 크기 예:(1280, 960))가 안 맞으면 동영상이 저장이 안 됨!
 
     while vf.isOpened():
@@ -264,8 +264,8 @@ def ProcessFrames(vf, obj_detector, stop, confidence_threshold, width, height, c
     video_writer.release()    
     print('finish!')
     with st.spinner(text="Detecting Finished! Converting Video Codec..."):
-        os.system("ffmpeg -i /opt/ml/final_project/web/result.mp4 -vcodec libx264 /opt/ml/final_project/web/result_h264.mp4 -y")
-    video_file = open("/opt/ml/final_project/web/result_h264.mp4", 'rb')
+        os.system("ffmpeg -i result.mp4 -vcodec libx264 result_h264.mp4 -y")
+    video_file = open("result_h264.mp4", 'rb')
     video_bytes = video_file.read()
     processing_discript.empty()
     current_frame.empty()
