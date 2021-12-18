@@ -48,8 +48,9 @@ def main():
     page_icon=":scooter:")
 
     state = SessionState.get(upload_key = None, enabled = True, start = False, conf = 70, nms = 50, run = False)
-
     st.title("PM 위법행위 감지 시스템")
+    awesomeImage = st.empty()
+    awesomeImage.image('title_image.png')
     st.write("영상에서 헬멧 미착용, 승차인원 초과행위를 탐지하는 시스템 입니다.")
 
     how_to = st.empty()
@@ -100,6 +101,7 @@ def main():
 
     if f is not None:
         how_to.empty()
+        awesomeImage.empty()
         st.sidebar.subheader("잡았다 요놈!")
         tfile = tempfile.NamedTemporaryFile(delete = False)
         tfile.write(f.read())  
