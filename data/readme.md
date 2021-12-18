@@ -27,6 +27,13 @@ cross check : Done
 EDA : None  
 revision : Move images in 'add_data' made with val, test data
 
+Ver 3.0 (update on 2021.12.17)  
+number of data : 1447 (train : 1078, validation : 245, test : 124)  
+annotation : Done  
+cross check : Done  
+EDA : None  
+revision : Add background images to train data
+
 
 
 # format
