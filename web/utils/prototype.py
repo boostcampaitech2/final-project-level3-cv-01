@@ -49,14 +49,16 @@ def drawBoxes(frame, pred, thres = 0.2): # thres 조절 추가 예정
 
 def lookup_checkpoint_files():
 
-    flie_list = list(os.listdir('/opt/ml/final_project/web/checkpoint/'))
-    flie_list.sort()
-    checkpoint_flie_list = []
-    for file in flie_list:
+    file_list = list(os.listdir('/opt/ml/final_project/final-project-level3-cv-01/web/checkpoint/'))
+    file_list.sort()
+    checkpoint_file_list = []
+    for file in file_list:
         if file[-3:] == '.pt':
-            checkpoint_flie_list.append(file)
+            checkpoint_file_list.append(file)
+    
+    checkpoint_file_list.append('merge')
 
-    return tuple(checkpoint_flie_list)
+    return tuple(checkpoint_file_list)
 
 
 def np_to_tensor(image, device):
