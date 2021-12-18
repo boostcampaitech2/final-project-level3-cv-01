@@ -4,6 +4,7 @@
 
 **/pretrained/
 web/*.pt
+web/checkpoint/
 backend/*.pt
 web/*.mp4
 real_time_inference/*.pt

@@ -49,7 +49,7 @@ def drawBoxes(frame, pred, thres = 0.2): # thres 조절 추가 예정
 
 def lookup_checkpoint_files():
 
-    flie_list = list(os.listdir('/opt/ml/final_project/web/'))
+    flie_list = list(os.listdir('/opt/ml/final_project/web/checkpoint/'))
     flie_list.sort()
     checkpoint_flie_list = []
     for file in flie_list:
