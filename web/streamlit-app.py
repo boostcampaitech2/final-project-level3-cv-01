@@ -85,6 +85,18 @@ def main():
             ckpt_files
         )
 
+        if ckpt_file == 'merge':
+            helmet_ckpt_files = tuple(filter(lambda x: "helmet" in x, ckpt_files))
+            helmet_ckpt_file = st.sidebar.radio(
+                "select helmet checkpoint file for merging",
+                helmet_ckpt_files
+                )
+            alone_ckpt_files = tuple(filter(lambda x: "alone" in x, ckpt_files))
+            alone_ckpt_file = st.sidebar.radio(
+                "select alone checkpoint file for merging",
+                alone_ckpt_files
+                )
+        
         confidence_threshold = st.sidebar.slider("Confidence score threshold", 
             min_value=0.1,
             max_value=1.0,
@@ -139,8 +151,8 @@ def main():
                     os.remove(filepath_h264)
                 
                 if ckpt_file == 'merge':
-                    model_helmet = attempt_load('checkpoint/helmet_ver3_ap50.pt',map_location=device)
-                    model_alone = attempt_load('checkpoint/alone_ver2.1_ap.pt',map_location=device)
+                    model_helmet = attempt_load(f'checkpoint/{helmet_ckpt_file}',map_location=device)
+                    model_alone = attempt_load(f'checkpoint/{alone_ckpt_file}',map_location=device)
                     
                     if isinstance(vf, cv2.VideoCapture):                       
                         ProcessFramesMerge(vf, model_helmet, model_alone, stop_button, confidence_threshold, width, height, current_frame)
@@ -200,7 +212,6 @@ def ProcessImage(image_vf, obj_detector, confidence_threshold, width, height):
             st.sidebar.write("No Helmet & Sharing")
             st.sidebar.write(f"score : {conf:.3f}")
             st.sidebar.write(f"Time : {now}")      
-
 
 def ProcessFrames(vf, obj_detector, stop, confidence_threshold, width, height, current_frame): 
     """
@@ -303,7 +314,6 @@ def ProcessFrames(vf, obj_detector, stop, confidence_threshold, width, height, c
     st.video(video_bytes)
     st.write("되돌아가시려면 사이드바 메뉴에서 아무거나 선택하세요.")
 
-
 def ProcessImageMerge(image_vf, helmet_detector, alone_detector, confidence_threshold, width, height):
     image_np = np.array(image_vf) #pil to cv
     image_resize = cv2.resize(image_np, (width, height))
@@ -350,7 +360,6 @@ def ProcessImageMerge(image_vf, helmet_detector, alone_detector, confidence_thre
             st.sidebar.write("No Helmet & Sharing")
             st.sidebar.write(f"score : {conf:.3f}")
             st.sidebar.write(f"Time : {now}")      
-
 
 def ProcessFramesMerge(vf, helmet_detector, alone_detector, stop, confidence_threshold, width, height, current_frame): 
     """
@@ -458,6 +467,5 @@ def ProcessFramesMerge(vf, helmet_detector, alone_detector, stop, confidence_thr
     current_frame.empty()
     st.video(video_bytes)
     st.write("되돌아가시려면 사이드바 메뉴에서 아무거나 선택하세요.")
-
 
 main()
