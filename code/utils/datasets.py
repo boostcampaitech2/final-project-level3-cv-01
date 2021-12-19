@@ -1486,6 +1486,8 @@ def get_side_images(img_files: List[str],
 
     def _is_side_image(img_file: str) -> bool:
         json_file = _img2json_path(img_file)
+        if not osp.isfile(json_file):
+            return True
 
         with open(json_file, 'r', encoding='utf-8') as f:
             label = json.load(f)
