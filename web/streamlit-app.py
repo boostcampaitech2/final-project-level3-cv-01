@@ -106,13 +106,12 @@ def main():
         
         result_resolution = st.sidebar.radio(
             "select result video resolution",
-            ("512 x 512", "1280 x 960",)
+            ("512 x 512", "768 x 576", "1280 x 960",)
         )
 
-        if result_resolution == "1280 x 960":
-            width, height = 1280, 960
-        elif result_resolution == "512 x 512":
-            width, height = 512, 512
+        resolution = result_resolution.split(" ")
+        width = int(resolution[0])
+        height = int(resolution[2])
     
     filepath = 'result.mp4'
     filepath_h264 = 'result_264.mp4'
