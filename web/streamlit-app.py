@@ -19,7 +19,7 @@ from models.experimental import attempt_load
 from utils.general import non_max_suppression, merge_pred
 from utils.torch_utils import select_device
 from utils.prototype import drawBoxes, lookup_checkpoint_files, np_to_tensor, send_to_bucket, image_to_byte_array
-from db import insert_data
+# from db import insert_data
 
 import pytz
 import datetime as dt
@@ -82,7 +82,7 @@ def main():
 
         ckpt_file = st.sidebar.radio(
             "select checkpoint file",
-            ckpt_files
+            list(filter(lambda x: "helmet" not in x and "alone" not in x, ckpt_files))
         )
 
         if ckpt_file == 'merge':
@@ -241,6 +241,9 @@ def ProcessFrames(vf, obj_detector, stop, confidence_threshold, width, height, c
                             "result.mp4", fourcc, fps, (width, height)
                         ) # Warning: 마지막 파라미터(이미지 크기 예:(1280, 960))가 안 맞으면 동영상이 저장이 안 됨!
 
+    current_catch_img = st.sidebar.empty() 
+    current_catch_text = st.sidebar.empty()
+
     while vf.isOpened():
         # if frame is read correctly ret is True
         ret, frame = vf.read()
@@ -278,24 +281,18 @@ def ProcessFrames(vf, obj_detector, stop, confidence_threshold, width, height, c
             if label == 1:
                 # img_url = send_to_bucket(img_name, crop_img_byte) # send to storage
                 # insert_data(now, img_url, str(label)) # insert to DB
-                st.sidebar.image(crop_img, use_column_width='always')
-                st.sidebar.write("No Helmet")
-                st.sidebar.write(f"score : {conf:.3f}")
-                st.sidebar.write(f"Time : {now}")
+                current_catch_img.image(crop_img, use_column_width='always')
+                current_catch_text.write(f"No Helmet \n score : {conf:.3f} \n Time : {now}")
             elif label == 2:
                 # img_url = send_to_bucket(img_name, crop_img_byte) # send to storage
+                current_catch_img.image(crop_img, use_column_width='always')
+                current_catch_text.write(f"Sharing \n score : {conf:.3f} \n Time : {now}")
                 # insert_data(now, img_url, str(label)) # insert to DB
-                st.sidebar.image(crop_img, use_column_width='always')
-                st.sidebar.write("Sharing")
-                st.sidebar.write(f"score : {conf:.3f}")
-                st.sidebar.write(f"Time : {now}") 
             elif label == 3:
+                current_catch_img.image(crop_img, use_column_width='always')
+                current_catch_text.write(f"No Helmet & Sharing \n score : {conf:.3f} \n Time : {now}")
                 # img_url = send_to_bucket(img_name, crop_img_byte) # send to storage
                 # insert_data(now, img_url, str(label)) # insert to DB
-                st.sidebar.image(crop_img, use_column_width='always')
-                st.sidebar.write("No Helmet & Sharing")
-                st.sidebar.write(f"score : {conf:.3f}")
-                st.sidebar.write(f"Time : {now}")
 
         frame_counter += 1
         fps_measurement = frame_counter/(end - start)
@@ -376,7 +373,8 @@ def ProcessFramesMerge(vf, helmet_detector, alone_detector, stop, confidence_thr
     except:
         print('We cannot determine number of frames and FPS!')
 
-
+    current_catch_img = st.sidebar.empty() 
+    current_catch_text = st.sidebar.empty()
     frame_counter = 0
     processing_discript = st.empty()
     processing_discript.write("👆처리중인 영상의 모습입니다.")
@@ -432,24 +430,18 @@ def ProcessFramesMerge(vf, helmet_detector, alone_detector, stop, confidence_thr
             if label == 1:
                 # img_url = send_to_bucket(img_name, crop_img_byte) # send to storage
                 # insert_data(now, img_url, str(label)) # insert to DB
-                st.sidebar.image(crop_img, use_column_width='always')
-                st.sidebar.write("No Helmet")
-                st.sidebar.write(f"score : {conf:.3f}")
-                st.sidebar.write(f"Time : {now}")
+                current_catch_img.image(crop_img, use_column_width='always')
+                current_catch_text.write(f"No Helmet \n score : {conf:.3f} \n Time : {now}")
             elif label == 2:
                 # img_url = send_to_bucket(img_name, crop_img_byte) # send to storage
+                current_catch_img.image(crop_img, use_column_width='always')
+                current_catch_text.write(f"Sharing \n score : {conf:.3f} \n Time : {now}")
                 # insert_data(now, img_url, str(label)) # insert to DB
-                st.sidebar.image(crop_img, use_column_width='always')
-                st.sidebar.write("Sharing")
-                st.sidebar.write(f"score : {conf:.3f}")
-                st.sidebar.write(f"Time : {now}") 
             elif label == 3:
+                current_catch_img.image(crop_img, use_column_width='always')
+                current_catch_text.write(f"No Helmet & Sharing \n score : {conf:.3f} \n Time : {now}")
                 # img_url = send_to_bucket(img_name, crop_img_byte) # send to storage
                 # insert_data(now, img_url, str(label)) # insert to DB
-                st.sidebar.image(crop_img, use_column_width='always')
-                st.sidebar.write("No Helmet & Sharing")
-                st.sidebar.write(f"score : {conf:.3f}")
-                st.sidebar.write(f"Time : {now}")
 
         frame_counter += 1
         fps_measurement = frame_counter/(end - start)
