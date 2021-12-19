@@ -29,3 +29,8 @@ pandas
 thop  # FLOPS computation
 pycocotools # COCO mAP
 streamlit
+# MySql 8.0 이상일 경우 => mysql-connector-python
+myspl.connector # 하위버전
+gcloud
+oauth2client==4.1.3
+

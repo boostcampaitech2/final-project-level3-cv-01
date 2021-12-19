@@ -4,7 +4,10 @@ import sys
 import os
 import tempfile
 import torch
+import uuid
+
 sys.path.append(os.getcwd())
+
 import cv2 
 from PIL import Image
 import time
@@ -15,10 +18,12 @@ from streamlit.server.server import Server
 from models.experimental import attempt_load
 from utils.general import non_max_suppression, merge_pred
 from utils.torch_utils import select_device
-from utils.prototype import drawBoxes, lookup_checkpoint_files, np_to_tensor
+from utils.prototype import drawBoxes, lookup_checkpoint_files, np_to_tensor, send_to_bucket, image_to_byte_array
+from db import insert_data
 
 import pytz
 import datetime as dt
+
 
 device = select_device('')
 KST = pytz.timezone('Asia/Seoul')
@@ -31,6 +36,7 @@ KST = pytz.timezone('Asia/Seoul')
     },
     allow_output_mutation=True,
 )
+
 
 def trigger_rerun():
     """
@@ -152,6 +158,7 @@ def main():
                 state.run = True
                 trigger_rerun()
 
+
 def ProcessImage(image_vf, obj_detector, confidence_threshold, width, height):
     image_np = np.array(image_vf) #pil to cv
     image_resize = cv2.resize(image_np, (width, height))
@@ -164,23 +171,31 @@ def ProcessImage(image_vf, obj_detector, confidence_threshold, width, height):
     now = dt.datetime.now(KST).isoformat().split('.')[0]
     st.image(image)
     for i in pred_list:
-        start = i[0]
-        end = i[1]
+        start_p = i[0]
+        end_p = i[1]
         conf = i[2]
         label = i[3]
-        crop_resion = (start + end)
-        crop_img = img.crop(crop_resion)
+        crop_region = (start_p + end_p)
+        crop_img = img.crop(crop_region)
+        # crop_img_byte = image_to_byte_array(crop_img) # image to byte
+        # img_name = now + "_" + str(label) + uuid.uuid4().hex + "png" # DB image name
         if label == 1:
+            # img_url = send_to_bucket(img_name, crop_img_byte) # send to storage
+            # insert_data(now, img_url, str(label)) # insert to DB
             st.sidebar.image(crop_img)
             st.sidebar.write("No Helmet")
             st.sidebar.write(f"score : {conf:.3f}")
             st.sidebar.write(f"Time : {now}")
         elif label == 2:
+            # img_url = send_to_bucket(img_name, crop_img_byte) # send to storage
+            # insert_data(now, img_url, str(label)) # insert to DB
             st.sidebar.image(crop_img)
             st.sidebar.write("Sharing")
             st.sidebar.write(f"score : {conf:.3f}")
             st.sidebar.write(f"Time : {now}") 
         elif label == 3:
+            # img_url = send_to_bucket(img_name, crop_img_byte) # send to storage
+            # insert_data(now, img_url, str(label)) # insert to DB
             st.sidebar.image(crop_img)
             st.sidebar.write("No Helmet & Sharing")
             st.sidebar.write(f"score : {conf:.3f}")
@@ -245,20 +260,27 @@ def ProcessFrames(vf, obj_detector, stop, confidence_threshold, width, height, c
             end_p = i[1]
             conf = i[2]
             label = i[3]
-            crop_resion = (start_p + end_p)
-            crop_img = img.crop(crop_resion)
-            # crop_img = crop_img.convert("BGR")
+            crop_region = (start_p + end_p)
+            crop_img = img.crop(crop_region)
+            # crop_img_byte = image_to_byte_array(crop_img) # image to byte
+            # img_name = now + "_" + str(label) + uuid.uuid4().hex + "png" # DB image name
             if label == 1:
+                # img_url = send_to_bucket(img_name, crop_img_byte) # send to storage
+                # insert_data(now, img_url, str(label)) # insert to DB
                 st.sidebar.image(crop_img, use_column_width='always')
                 st.sidebar.write("No Helmet")
                 st.sidebar.write(f"score : {conf:.3f}")
                 st.sidebar.write(f"Time : {now}")
             elif label == 2:
+                # img_url = send_to_bucket(img_name, crop_img_byte) # send to storage
+                # insert_data(now, img_url, str(label)) # insert to DB
                 st.sidebar.image(crop_img, use_column_width='always')
                 st.sidebar.write("Sharing")
                 st.sidebar.write(f"score : {conf:.3f}")
                 st.sidebar.write(f"Time : {now}") 
             elif label == 3:
+                # img_url = send_to_bucket(img_name, crop_img_byte) # send to storage
+                # insert_data(now, img_url, str(label)) # insert to DB
                 st.sidebar.image(crop_img, use_column_width='always')
                 st.sidebar.write("No Helmet & Sharing")
                 st.sidebar.write(f"score : {conf:.3f}")
@@ -299,23 +321,31 @@ def ProcessImageMerge(image_vf, helmet_detector, alone_detector, confidence_thre
     now = dt.datetime.now(KST).isoformat().split('.')[0]
     st.image(image)
     for i in pred_list:
-        start = i[0]
-        end = i[1]
+        start_p = i[0]
+        end_p = i[1]
         conf = i[2]
         label = i[3]
-        crop_resion = (start + end)
-        crop_img = img.crop(crop_resion)
+        crop_region = (start_p + end_p)
+        crop_img = img.crop(crop_region)
+        # crop_img_byte = image_to_byte_array(crop_img) # image to byte
+        # img_name = now + "_" + str(label) + uuid.uuid4().hex + "png" # DB image name
         if label == 1:
+            # img_url = send_to_bucket(img_name, crop_img_byte) # send to storage
+            # insert_data(now, img_url, str(label)) # insert to DB
             st.sidebar.image(crop_img)
             st.sidebar.write("No Helmet")
             st.sidebar.write(f"score : {conf:.3f}")
             st.sidebar.write(f"Time : {now}")
         elif label == 2:
+            # img_url = send_to_bucket(img_name, crop_img_byte) # send to storage
+            # insert_data(now, img_url, str(label)) # insert to DB
             st.sidebar.image(crop_img)
             st.sidebar.write("Sharing")
             st.sidebar.write(f"score : {conf:.3f}")
             st.sidebar.write(f"Time : {now}") 
         elif label == 3:
+            # img_url = send_to_bucket(img_name, crop_img_byte) # send to storage
+            # insert_data(now, img_url, str(label)) # insert to DB
             st.sidebar.image(crop_img)
             st.sidebar.write("No Helmet & Sharing")
             st.sidebar.write(f"score : {conf:.3f}")
@@ -379,7 +409,6 @@ def ProcessFramesMerge(vf, helmet_detector, alone_detector, stop, confidence_thr
         frame, pred_list = drawBoxes(frame, pred, confidence_threshold)
         cvt_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         current_frame.image(cvt_frame)
-        print(type(frame)) 
         end = time.time()
         now = dt.datetime.now(KST).isoformat()
         for i in pred_list:
@@ -387,20 +416,27 @@ def ProcessFramesMerge(vf, helmet_detector, alone_detector, stop, confidence_thr
             end_p = i[1]
             conf = i[2]
             label = i[3]
-            crop_resion = (start_p + end_p)
-            crop_img = img.crop(crop_resion)
-            # crop_img = crop_img.convert("BGR")
+            crop_region = (start_p + end_p)
+            crop_img = img.crop(crop_region)
+            # crop_img_byte = image_to_byte_array(crop_img) # image to byte
+            # img_name = now + "_" + str(label) + uuid.uuid4().hex + "png" # DB image name
             if label == 1:
+                # img_url = send_to_bucket(img_name, crop_img_byte) # send to storage
+                # insert_data(now, img_url, str(label)) # insert to DB
                 st.sidebar.image(crop_img, use_column_width='always')
                 st.sidebar.write("No Helmet")
                 st.sidebar.write(f"score : {conf:.3f}")
                 st.sidebar.write(f"Time : {now}")
             elif label == 2:
+                # img_url = send_to_bucket(img_name, crop_img_byte) # send to storage
+                # insert_data(now, img_url, str(label)) # insert to DB
                 st.sidebar.image(crop_img, use_column_width='always')
                 st.sidebar.write("Sharing")
                 st.sidebar.write(f"score : {conf:.3f}")
                 st.sidebar.write(f"Time : {now}") 
             elif label == 3:
+                # img_url = send_to_bucket(img_name, crop_img_byte) # send to storage
+                # insert_data(now, img_url, str(label)) # insert to DB
                 st.sidebar.image(crop_img, use_column_width='always')
                 st.sidebar.write("No Helmet & Sharing")
                 st.sidebar.write(f"score : {conf:.3f}")
