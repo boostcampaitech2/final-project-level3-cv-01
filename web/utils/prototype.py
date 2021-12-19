@@ -17,7 +17,7 @@ def DetermineBoxCenter(box):
     return [cx, cy] 
 
 
-def drawBoxes(frame, pred, thres = 0.2): # thres 조절 추가 예정
+def drawBoxes(frame, pred, classes=['AH','A~H','~AH','~A~H'], thres = 0.2): # thres 조절 추가 예정
     pred_list = []
     pred = pred.to('cpu')
     boxColor = {
@@ -26,12 +26,12 @@ def drawBoxes(frame, pred, thres = 0.2): # thres 조절 추가 예정
         2: (0, 0, 255), # 헬멧O 혼자X 빨간색
         3: (255, 0, 0), # 헬멧X 혼자X 파란색
     }
-    className = {
-        0: "Helmet",
-        1: "NoHelmet",
-        2: "SharingHelmet",
-        3: "Sharing",
-    }
+
+    clsToName = {'H':'Helmet', '~H':'No Helmet', 'A':'Alone','~A':'Sharing','AH':'Helmet','A~H':'NoHelmet','~AH':'SharingHelmet','~A~H':'SharingNoHelmet'}
+    className = {}
+    for i, cls in enumerate(classes):
+        className[i] = clsToName[cls]
+
     TextColor = (255, 255, 255) # white
     boxThickness = 3 
 
