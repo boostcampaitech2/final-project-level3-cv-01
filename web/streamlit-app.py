@@ -195,7 +195,10 @@ def ProcessImage(image_vf, obj_detector, confidence_threshold, width, height):
             # img_url = send_to_bucket(img_name, crop_img_byte) # send to storage
             # insert_data(now, img_url, str(label)) # insert to DB
             st.sidebar.image(crop_img)
-            st.sidebar.write("No Helmet")
+            if classes[label] == '~A':
+                st.sidebar.write("Sharing")
+            else:
+                st.sidebar.write("No Helmet")
             st.sidebar.write(f"score : {conf:.3f}")
             st.sidebar.write(f"Time : {now}")
         elif label == 2:
