@@ -1,6 +1,8 @@
 import os
 import glob
 
+from torch._C import device
+
 import cv2
 import torch
 import numpy as np
@@ -12,9 +14,9 @@ from torch.utils.data import Dataset
 img_formats = ['bmp', 'jpg', 'jpeg', 'png', 'tif', 'tiff', 'dng']  # acceptable image suffixes
 
 
-def create_dataloader(path, img_size, batch_size, workers=8):
+def create_dataloader(path, image_size, batch_size, workers=8):
     
-    dataset = ClassificationDataset(path, img_size, batch_size)
+    dataset = ClassificationDataset(path, image_size)
 
     batch_size = min(batch_size, len(dataset))
     nw = min([os.cpu_count(), batch_size if batch_size > 1 else 0, workers])  # number of workers
@@ -27,7 +29,9 @@ def create_dataloader(path, img_size, batch_size, workers=8):
 
 
 class ClassificationDataset(Dataset):
-    def __init__(self, path):
+    def __init__(self, path, image_size):
+        self.image_size = image_size
+
         def img2label_paths(img_paths):
             # Define label paths as a function of image paths
             
@@ -56,6 +60,9 @@ class ClassificationDataset(Dataset):
 
         self.label_files = img2label_paths(self.img_files)  # labels
         self.objects, self.labels = self.get_objects_labels()
+
+    def __len__(self):
+        return len(self.labels)
 
     def __getitem__(self, index):
         # Load image
@@ -98,16 +105,55 @@ class ClassificationDataset(Dataset):
         img = cv2.imread(path)  # BGR
         assert img is not None, 'Image Not Found ' + path
 
-        img = crop_image(img, box)
+        img = crop_image(img, box, self.image_size)
 
         return img
 
+    # @staticmethod
+    # def collate_fn(batch):
+    #     return tuple(zip(*batch))
+
     @staticmethod
     def collate_fn(batch):
-        return tuple(zip(*batch))
+
+        collate_images = []
+        collate_labels = []
+
+        images, labels = tuple(zip(*batch))
+        len_h = [image.shape[1] for image in images]
+        max_h = max(len_h)
+        len_w = [image.shape[2] for image in images]
+        max_w = max(len_w)
+
+        # print(f"max_h, max_w : {max_h}, {max_w}")
+        # print(f"len_h : {len_h}")
+        # print(f"len_w : {len_w}")
+
+        for image, label, h, w in zip(images, labels, len_h, len_w):
+            h_diff = max_h - h
+            w_diff = max_w - w
+            top_pad = h_diff // 2
+            bottom_pad = h_diff - top_pad
+            left_pad = w_diff // 2
+            right_pad = w_diff - left_pad
+
+            # print(top_pad, bottom_pad, left_pad, right_pad)
+
+            # pad_image = torch.nn.functional.pad(image,
+            #                             pad=(left_pad, right_pad, top_pad, bottom_pad),
+            #                             value=0)
+            # print(image.shape, pad_image.shape)
+
+            collate_images.append(
+                torch.nn.functional.pad(image,
+                                        pad=(left_pad, right_pad, top_pad, bottom_pad),
+                                        value=0))
+            collate_labels.append(label)
+
+        return torch.stack(collate_images), torch.stack(collate_labels)
 
 
-def crop_image(image, box):
+def crop_image(image, box, image_size):
     h0, w0 = image.shape[:2]
     
     if len(box) == 0:
@@ -121,7 +167,15 @@ def crop_image(image, box):
 
     cropped_image = image[lty:rby, ltx:rbx, :]
 
-    return cropped_image
+    new_h, new_w = cropped_image.shape[:2]
+    max_len = max(new_h, new_w)
+    ratio = image_size / max_len    
+    
+    resized_image = cv2.resize(cropped_image,
+                           dsize=(int(new_w * ratio), int(new_h * ratio)),
+                           interpolation=cv2.INTER_LINEAR)
+
+    return resized_image
 
 
 class InfiniteDataLoader(torch.utils.data.dataloader.DataLoader):
