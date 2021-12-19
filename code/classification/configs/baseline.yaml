@@ -1,0 +1,7 @@
+train: /opt/ml/final_project/data/train/images
+valid: /opt/ml/final_project/data/val/images
+test: /opt/ml/final_project/data/test/images
+
+lr: 0.01
+momentum: 0.937
+lrf: 0.2
