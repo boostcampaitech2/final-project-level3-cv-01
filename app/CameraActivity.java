@@ -5,12 +5,9 @@ import android.content.Intent;
 import android.hardware.Camera;
 import android.media.MediaScannerConnection;
 import android.os.Bundle;
-import android.os.Environment;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
-import android.widget.Toast;
-
 import androidx.appcompat.app.AppCompatActivity;
 
 import java.io.BufferedOutputStream;
@@ -23,9 +20,7 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.Set;
+import java.nio.channels.FileChannel;
 
 import static android.os.Environment.getExternalStorageDirectory;
 
@@ -36,29 +31,28 @@ public class CameraActivity extends AppCompatActivity {
 
     private static final String TAG = "CameraActivity";
     private static final String PATH = getExternalStorageDirectory().getAbsolutePath() + "/DCIM/Camera/";
+    private final String saveName = "save.jpg";
+    private final String savePath = PATH + saveName;
+    private final String sendName = "send.jpg";
+    private final String sendPath = PATH + sendName;
+    private final int FREQUENCY = 50;
+    private final static int BUFFER_SIZE = 1400;
 
     private Socket socket;
 
     CameraSurface mSurface;
     Camera mCamera;
-//    MediaRecorder mRecorder;
-//    SurfaceHolder mSurfaceHolder;
     Button mShutter;
-//    Button mRecord;
     private static CameraActivity instance;
     int cnt;
+    int saveCnt=0;
 
     private boolean isRunning = false;
+    private boolean isSending;
+    private boolean isRenaming = false;
     private PrintWriter pw;
-    private SendThread sender;
     private FileInputStream fis;
     private OutputStream os;
-
-
-    boolean isRecording = false;
-    private boolean is_connected = false;
-//    boolean isPlaying = false;
-//    boolean hasVideo = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -68,12 +62,10 @@ public class CameraActivity extends AppCompatActivity {
         Intent intent = getIntent();
         processCommand(intent);
 
-
-
         instance = this;
         cnt = 0;
 
-        // check if save directory is exist
+        // Check if save directory is exist. If not, make a directory.
         File directory = new File(PATH);
         if (!directory.exists()) {
             directory.mkdirs();
@@ -82,22 +74,13 @@ public class CameraActivity extends AppCompatActivity {
             Log.d(TAG, "Directory already exist : " + directory.getPath());
         }
 
+        // Instances for camera
         mSurface = findViewById(R.id.preview);
         mCamera = mSurface.mCamera;
         mShutter = findViewById(R.id.shutter_btn);
-
-//        // handle auto focus
-//        findViewById(R.id.focus).setOnClickListener(
-//                v -> {
-//                    mShutter.setEnabled(false);
-//                    mSurface.mCamera.autoFocus(mAutoFocus);
-//                });
-//
-//        // handle shutter button
-//        mShutter = findViewById(R.id.shutter);
-//        mShutter.setOnClickListener(v -> startRecording());
     }
 
+    // When activity gets started, connect to the server.
     private void processCommand(Intent intent) {
         Bundle bundle = intent.getExtras();
         String ip = bundle.getString("ip");
@@ -112,6 +95,7 @@ public class CameraActivity extends AppCompatActivity {
         Log.d(TAG, "Complete process.");
     }
 
+    // Connect to the server.
     private void connect(InetSocketAddress addr) {
         /*
          * Connect to server.
@@ -121,14 +105,15 @@ public class CameraActivity extends AppCompatActivity {
          *   bool : whether connected or not
          */
 
-        // connect or float error message
+        // Connect or float error message
         socket = new Socket();
 
         new Thread(new Runnable() {
             @Override
             public void run() {
                 Log.d(TAG, "Try to connect.");
-                // try to connect to server
+
+                // Try to connect to server
                 try {
                     socket.connect(addr);
                     Thread.sleep(100);
@@ -138,16 +123,18 @@ public class CameraActivity extends AppCompatActivity {
                     e.printStackTrace();
                 }
 
+                // If not connected, log error message and quit activity.
                 if (!socket.isConnected()) {
                     Log.d(TAG, "Failed to connect.");
                     setResult(RESULT_CANCELED);
                     finish();
                 } else {
                     try {
-                        Log.d(TAG, "Try to create os, pw.");
                         os = socket.getOutputStream();
                         pw = new PrintWriter(new BufferedOutputStream(os), true);
-                        Log.d(TAG, "os, pw created.");
+                        pw.println("connect");
+                        pw.flush();
+                        Log.d(TAG, "send connect code");
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -171,36 +158,31 @@ public class CameraActivity extends AppCompatActivity {
         }
     }
 
+    // Save images and send them to the server.
     private void execute() {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                if (isRecording) {
-                    isRecording = false;
+                if (isRunning) {
+                    isRunning = false;
                     mShutter.setText("START");
                 } else {
-                    long beforeTime = System.currentTimeMillis();
-                    isRecording = true;
+                    isRunning = true;
                     mShutter.setText("STOP");
-                    while (isRecording) {
-                        cnt++;
+                    while (isRunning) {
+                        mSurface.mCamera.takePicture(null, null, mPicture);
                         try {
-                            Thread.sleep(100);
+                            Thread.sleep(FREQUENCY);
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
-                        mSurface.mCamera.takePicture(null, null, mPicture);
-                        Log.d(TAG, "cnt : " + cnt);
-//                        sendImage();
                     }
-                    long afterTime = System.currentTimeMillis();
-                    long secDiffTime = (afterTime - beforeTime);
-                    Log.d(TAG, "Time spent : " + secDiffTime);
                 }
             }
         }).start();
     }
 
+    // Quit activity.
     public void quit() {
         new Thread(new Runnable() {
             @Override
@@ -212,6 +194,7 @@ public class CameraActivity extends AppCompatActivity {
                 try {
                     String code = "close";
                     pw.println(code);
+                    pw.flush();
                     pw.close();
                     os.close();
                     socket.close();
@@ -220,187 +203,160 @@ public class CameraActivity extends AppCompatActivity {
                 }
             }
         }).start();
+
+        setResult(RESULT_OK);
+        finish();
     }
 
-    public void sendImage() {
-
-        sender = new SendThread("Sender" + cnt);
-        sender.setDaemon(true);
-        sender.start();
-        isRunning = true;
-        Log.d(TAG, "File transfer completed.");
-    }
-
-    class SendThread extends Thread {
-
-        public String name;
-
-        public SendThread(String name) {
-            this.name = name;
-        }
-
-        @Override
-        public void run() {
-            String fileName = String.format("save.jpg", cnt);
-            String path = PATH + fileName;
-            File file = new File(path);
-
-            if (file.exists()) {
-                long fileSize = file.length();
-                final long[] totalReadBytes = {0};
-                byte[] buffer = new byte[32768];
-                int readBytes;
-//            final double[] startTime = {0};
-
-                String code = "image";
-                //                    pw = new PrintWriter(new BufferedOutputStream(socket.getOutputStream()), true);
-                pw.println(code);
-                pw.flush();
-                Log.d(TAG, "Send code : " + code);
-
-                try {
-                    fis = new FileInputStream(file);
-                    if (!socket.isConnected()) {
-                        Log.d(TAG, "socket is not connected.");
-                    }
-
-//                startTime[0] = System.currentTimeMillis();
-                    os = socket.getOutputStream();
-                    while ((readBytes = fis.read(buffer)) > 0) {
-//                        set.add(readBytes);
-                        os.write(buffer, 0, readBytes);
-                        totalReadBytes[0] += readBytes;
-                        Log.d(TAG, "In progress: " + totalReadBytes[0] + "/"
-                                + fileSize + " Byte(s) ("
-                                + (totalReadBytes[0] * 100 / fileSize) + " %)");
-                    }
-//                    Log.d(TAG, "readBytes set : " + set.toString());
-                    pw.println("");
-                    pw.flush();
-
-                    fis.close();
-//                os.close();
-
-                } catch (FileNotFoundException e) {
-                    e.printStackTrace();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-
-//            code = "end";
-//            pw.println(code);
-//            pw.flush();
-//            Log.d(TAG, "Send code : " + code);
-            } else {
-                Log.d(TAG, String.format("file not exits {%s}", fileName));
-            }
-        }
-    }
-
-//    private boolean checkCameraHardware(Context context) {
-//        if (context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA)){
-//            // this device has a camera
-//            return true;
-//        } else {
-//            // no camera on this device
-//            return false;
-//        }
-//    }
-
-    // enable shutter
+    // Enable shutter
     Camera.AutoFocusCallback mAutoFocus = new Camera.AutoFocusCallback() {
         public void onAutoFocus(boolean success, Camera camera) {
             mShutter.setEnabled(success);
         }
     };
 
-    // save image file
+    // Actions when taking a picture
     Camera.PictureCallback mPicture = new Camera.PictureCallback() {
 
         public void onPictureTaken(byte[] data, Camera camera) {
+
             new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    Thread t = Thread.currentThread();
-                    Log.d(TAG + t, "Thread " + t.getId() + " started.");
 
-                    Set<Thread> threadSet = Thread.getAllStackTraces().keySet();
-                    Log.d(TAG + t, "Numerber of Threads : " + threadSet.size());
+                    saveCnt++;
 
-                    cnt += 1;
-                    String fileName = String.format("save.jpg", cnt);
-                    String path = PATH + fileName;
-                    File file = new File(path);
+                    // Save image
+                    long beforeTime = System.currentTimeMillis();
 
-//                    if (file.exists()) {
-//                        String send_fileName = String.format("send.jpg", cnt);
-//                        String send_path = PATH + send_fileName;
-//                        File send_file = new File(send_path);
-//
-//                        boolean success = file.renameTo(send_file);
-//                        if (!success) {
-//                            Log.d(TAG + t, String.format("Can't rename file {%s}", fileName));
-//                        }
-//                    }
+                    File file = new File(savePath);
+                    Log.d(TAG, "File created.");
 
-                    Log.d(TAG + t, "File created.");
                     try {
                         FileOutputStream fos = new FileOutputStream(file);
                         fos.write(data);
                         fos.flush();
                         fos.close();
-                        Log.d(TAG + t, "File was written.");
+                        Log.d(TAG, "File was written.");
                     } catch (Exception e) {
                         Log.d(TAG,"Error Occurred : " + e.getMessage());
                         return;
                     }
 
-//                    MediaScannerConnection.scanFile(context, new String[] { file.getPath() }, new String[] { "image/jpg" }, null);
-                    Log.d(TAG, "image saved : " + path);
+                    MediaScannerConnection.scanFile(context, new String[] {savePath}, new String[] { "image/jpg" }, null);
+                    Log.d(TAG, "image saved : " + savePath);
 
-//                    Log.d(TAG, "Thread " + t.getId() + " finished.");
+                    // Rename image
+                    File sendFile = new File(sendPath);
+                    isRenaming = true;
 
-                    //////////////////////////////
-
-                    long fileSize = file.length();
-                    final long[] totalReadBytes = {0};
-                    byte[] buffer = new byte[32768];
-                    int readBytes;
-
-                    String code = "image";
-                    pw.println(code);
-                    pw.flush();
-                    Log.d(TAG, "Send code : " + code);
-
+                    boolean success = false;
                     try {
-                        fis = new FileInputStream(file);
-                        if (!socket.isConnected()) {
-                            Log.d(TAG, "socket is not connected.");
-                        }
-
-                        os = socket.getOutputStream();
-                        while ((readBytes = fis.read(buffer)) > 0) {
-                            os.write(buffer, 0, readBytes);
-                            totalReadBytes[0] += readBytes;
-                            Log.d(TAG, "In progress: " + totalReadBytes[0] + "/"
-                                    + fileSize + " Byte(s) ("
-                                    + (totalReadBytes[0] * 100 / fileSize) + " %)");
-                        }
-                        pw.println("");
-                        pw.flush();
-
-                        fis.close();
-
-                    } catch (FileNotFoundException e) {
-                        e.printStackTrace();
+                        copy(file, sendFile);
+                        success = true;
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
+
+                    if (success) {
+                        isRenaming = false;
+                        Log.d(TAG, String.format("renamed file {%s}", sendName));
+                        MediaScannerConnection.scanFile(context, new String[] {sendPath}, new String[] { "image/jpg" }, null);
+                    } else {
+                        Log.d(TAG, String.format("Can't rename file {%s}", sendName));
+                        return;
+                    }
+
+                    long afterTime = System.currentTimeMillis();
+                    long secDiffTime = (afterTime - beforeTime);
+                    Log.d(TAG,"saveImages - " + "Time spent : " + secDiffTime);
+                    Log.d(TAG,"saveImages - " + "number of saved images : " + saveCnt);
+
+                    isSending = true;
+                    sendImage();
+                    isSending = false;
+
 
                 }
             }).start();
         }
     };
+
+    // Copy a file.
+    public void copy(File src, File dst) throws IOException {
+        FileInputStream inStream = new FileInputStream(src);
+        FileOutputStream outStream = new FileOutputStream(dst);
+        FileChannel inChannel = inStream.getChannel();
+        FileChannel outChannel = outStream.getChannel();
+        inChannel.transferTo(0, inChannel.size(), outChannel);
+        inStream.close();
+        outStream.close();
+    }
+
+    // Send images to the server.
+    private void sendImage() {
+        cnt++;
+
+        long beforeTime = System.currentTimeMillis();
+
+        while (isRenaming) {
+            continue;
+        }
+
+        File file = new File(sendPath);
+        long fileSize = file.length();
+        final long[] totalReadBytes = {0};
+        byte[] buffer = new byte[BUFFER_SIZE];
+        int readBytes;
+
+        String code = "image";  // Start of file
+        byte[] bcode = code.getBytes();
+        try {
+            os.write(bcode, 0, bcode.length);
+            os.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        Log.d(TAG, "Send code : " + code);
+
+        try {
+            fis = new FileInputStream(file);
+            if (!socket.isConnected()) {
+                Log.d(TAG, "socket is not connected.");
+            }
+
+            os = socket.getOutputStream();
+            while ((readBytes = fis.read(buffer)) > 0) {
+                os.write(buffer, 0, readBytes);
+                totalReadBytes[0] += readBytes;
+                Log.d(TAG, "In progress: " + totalReadBytes[0] + "/"
+                        + fileSize + " Byte(s) ("
+                        + (totalReadBytes[0] * 100 / fileSize) + " %)");
+            }
+            String emptyCode = "";
+            byte[] bEmptyCode = emptyCode.getBytes();
+            os.write(bEmptyCode,0,bEmptyCode.length);
+            os.flush();
+
+            String ecode = "EOF";   // End Of File
+            byte[] becode = ecode.getBytes();
+            os.write(becode, 0, becode.length);
+            os.flush();
+
+            fis.close();
+
+            long afterTime = System.currentTimeMillis();
+            long secDiffTime = (afterTime - beforeTime);
+            Log.d(TAG, "sendImage - " + "Time spent : " + secDiffTime);
+            Log.d(TAG, "sendImage - " + "number of sent images : " + cnt);
+
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     public static CameraActivity getInstance() {
         return instance;
