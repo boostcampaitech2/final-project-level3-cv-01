@@ -12,21 +12,16 @@ import android.view.SurfaceView;
 import java.io.IOException;
 import java.util.List;
 
-// preview surface class
+// Preview surface class
 class CameraSurface extends SurfaceView implements SurfaceHolder.Callback {
     SurfaceHolder mHolder;
     Camera mCamera;
     CameraActivity activity;
 
-    private static final int preH = 1280;   // 1280
-    private static final int preW = 720;    // 720
-    private static final int picH = 1280;   // 1280
-    private static final int picW = 720;    // 720
-
-//    private static final int preH = 1920;   // 1280
-//    private static final int preW = 1080;    // 720
-//    private static final int picH = 4032;   // 1280
-//    private static final int picW = 3024;    // 720
+    private static final int preH = 1280;   // 1920
+    private static final int preW = 720;    // 1080
+    private static final int picH = 1280;   // 4032
+    private static final int picW = 720;    // 3024
 
     public CameraSurface(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -34,7 +29,7 @@ class CameraSurface extends SurfaceView implements SurfaceHolder.Callback {
         mHolder.addCallback(this);
     }
 
-    // when created, open camera and set preview
+    // When created, open camera and set preview
     public void surfaceCreated(SurfaceHolder holder) {
 
         mCamera = Camera.open();
@@ -46,20 +41,23 @@ class CameraSurface extends SurfaceView implements SurfaceHolder.Callback {
         parameters.setPreviewSize(preH, preW);
         mCamera.setParameters(parameters);
 
+        // Set preview size
         List<Camera.Size> preSizes = parameters.getSupportedPreviewSizes();
-        Camera.Size preSize = preSizes.get(0);
+        Camera.Size preSize;
         for (int i = 0; i < preSizes.size(); i++) {
             preSize = preSizes.get(i);
             Log.d("MyApplication", "Camera preview size : " + preSize.width + ", " + preSize.height);
         }
 
+        // Set picture size
         List<Camera.Size> picSizes = parameters.getSupportedPictureSizes();
-        Camera.Size picSize = picSizes.get(0);
+        Camera.Size picSize;
         for (int i = 0; i < picSizes.size(); i++) {
             picSize = picSizes.get(i);
             Log.d("MyApplication", "Camera picture size : " + picSize.width + ", " + picSize.height);
         }
 
+        // Set camera orientation
         activity = CameraActivity.getInstance();
         setCameraDisplayOrientation(activity, Camera.CameraInfo.CAMERA_FACING_BACK, mCamera);
         try {
@@ -70,7 +68,7 @@ class CameraSurface extends SurfaceView implements SurfaceHolder.Callback {
         }
     }
 
-    // when surface is distroyed, distroy camera object too
+    // When surface is destroyed, destroy camera object too
     public void surfaceDestroyed(SurfaceHolder holder) {
         if (mCamera != null) {
             mCamera.stopPreview();
@@ -79,7 +77,7 @@ class CameraSurface extends SurfaceView implements SurfaceHolder.Callback {
         }
     }
 
-    // logic to determine the size of preview
+    // Logic to determine the size of preview
     public void surfaceChanged(SurfaceHolder holder, int format, int width,
                                int height) {
         Camera.Parameters params = mCamera.getParameters();
@@ -102,6 +100,7 @@ class CameraSurface extends SurfaceView implements SurfaceHolder.Callback {
         mCamera.startPreview();
     }
 
+    // Logic to determine the orientation of the camera
     public static void setCameraDisplayOrientation(Activity activity,
                                                    int cameraId, android.hardware.Camera camera) {
         android.hardware.Camera.CameraInfo info =
