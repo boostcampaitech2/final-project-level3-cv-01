@@ -5,7 +5,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.os.Parcelable;
 import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
@@ -15,23 +14,17 @@ import androidx.activity.result.ActivityResult;
 import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-
-import java.io.IOException;
-import java.io.Serializable;
-import java.net.InetSocketAddress;
-import java.net.Socket;
 
 public class ConnectActivity extends AppCompatActivity {
 
     private final static String TAG = "ConnectActivity";
     private final Context context = ConnectActivity.this;
-    private final int PERMISSION_ALL = 1;
-    private final static int ACT = 0;
-    String[] PERMISSIONS = {
+    private final static int PERMISSION_ALL = 1;
+
+    private final static String[] PERMISSIONS = {
             Manifest.permission.CAMERA,
             Manifest.permission.WRITE_EXTERNAL_STORAGE
     };
@@ -40,8 +33,6 @@ public class ConnectActivity extends AppCompatActivity {
     private EditText port_text;
     private ActivityResultLauncher<Intent> resultLauncher;
 
-    private Socket socket;
-    private boolean is_connected = false;
     private boolean has_permissions = false;
 
     @Override
@@ -54,6 +45,7 @@ public class ConnectActivity extends AppCompatActivity {
 
         getPermissions();
 
+        // Launcher for new activity
         resultLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
                 new ActivityResultCallback<ActivityResult>() {
@@ -62,12 +54,15 @@ public class ConnectActivity extends AppCompatActivity {
                         Log.d(TAG, "Exit CameraActivity.");
                         if (result.getResultCode() == RESULT_CANCELED) {
                             Toast.makeText(context, "Failed to connect to server.", Toast.LENGTH_LONG).show();
+                        } else if (result.getResultCode() == RESULT_OK) {
+                            Toast.makeText(context, "Finish.", Toast.LENGTH_LONG).show();
                         }
                     }
                 });
 
     }
 
+    // Check permissions
     private boolean checkPermissions() {
         for (String permission: PERMISSIONS) {
             if (ContextCompat.checkSelfPermission(context, permission)
@@ -78,6 +73,7 @@ public class ConnectActivity extends AppCompatActivity {
         return true;
     }
 
+    // Get permissions
     private void getPermissions() {
         has_permissions = checkPermissions();
         if (!has_permissions) {
@@ -87,19 +83,21 @@ public class ConnectActivity extends AppCompatActivity {
 
     public void mOnClick(View v) {
         if (v.getId() == R.id.connect_btn) {
-            // get ip from EditText
+
+            // Get ip address from EditText
             String ip = ip_text.getText().toString();
             if (ip.equals("")) {
                 ip = ip_text.getHint().toString();
             }
 
-            // get port from EditText
+            // Get port number from EditText
             String port_num = port_text.getText().toString();
             if (port_num.equals("")) {
                 port_num = port_text.getHint().toString();
             }
             int port = Integer.parseInt(port_num);
 
+            // Start new activity
             if (has_permissions) {
                 if (typeOf(ip).equals("String") && typeOf(port).equals("int")) {
                     Intent intent = new Intent(this, CameraActivity.class);
