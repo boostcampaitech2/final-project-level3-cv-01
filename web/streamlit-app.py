@@ -179,7 +179,8 @@ def ProcessImage(image_vf, obj_detector, confidence_threshold, width, height):
 
     pred = obj_detector(image_tensor)[0]
     pred = non_max_suppression(pred)[0]
-    image, pred_list = drawBoxes(image_resize, pred, confidence_threshold)
+    classes = obj_detector.module.names if hasattr(obj_detector, 'module') else obj_detector.names
+    image, pred_list = drawBoxes(image_resize, pred, classes, confidence_threshold)
     now = dt.datetime.now(KST).isoformat().split('.')[0]
     st.image(image)
     for i in pred_list:
@@ -263,7 +264,8 @@ def ProcessFrames(vf, obj_detector, stop, confidence_threshold, width, height, c
         frame_tensor = np_to_tensor(frame, device)
         pred = obj_detector(frame_tensor)[0]
         pred = non_max_suppression(pred)[0]
-        frame, pred_list = drawBoxes(frame, pred, confidence_threshold)
+        classes = obj_detector.module.names if hasattr(obj_detector, 'module') else obj_detector.names
+        frame, pred_list = drawBoxes(frame, pred, classes, confidence_threshold)
         cvt_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         current_frame.image(cvt_frame)
         print(type(frame)) 
@@ -324,7 +326,8 @@ def ProcessImageMerge(image_vf, helmet_detector, alone_detector, confidence_thre
     pred_alone = non_max_suppression(pred_alone)[0]
 
     pred = merge_pred(pred_helmet, pred_alone, merge_thres=0.5)
-    image, pred_list = drawBoxes(image_resize, pred, confidence_threshold)
+    classes = ['AH','A~H','~AH','~A~H']
+    image, pred_list = drawBoxes(image_resize, pred, classes, confidence_threshold)
     now = dt.datetime.now(KST).isoformat().split('.')[0]
     st.image(image)
     for i in pred_list:
@@ -412,8 +415,8 @@ def ProcessFramesMerge(vf, helmet_detector, alone_detector, stop, confidence_thr
         pred_alone = non_max_suppression(pred_alone)[0]
         
         pred = merge_pred(pred_helmet, pred_alone, merge_thres=0.5)
-
-        frame, pred_list = drawBoxes(frame, pred, confidence_threshold)
+        classes = ['AH','A~H','~AH','~A~H']
+        frame, pred_list = drawBoxes(frame, pred, classes, confidence_threshold)
         cvt_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         current_frame.image(cvt_frame)
         end = time.time()
