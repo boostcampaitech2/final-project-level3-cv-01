@@ -20,3 +20,7 @@ pip install -r requirements.txt
 ```
 streamlit run streamlit-app.py
 ```
+
+
+## Google Cloud Platform을 사용하실 경우
+
