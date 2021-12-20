@@ -106,13 +106,12 @@ def main():
         
         result_resolution = st.sidebar.radio(
             "select result video resolution",
-            ("512 x 512", "1280 x 960",)
+            ("512 x 512", "768 x 576", "1280 x 960",)
         )
 
-        if result_resolution == "1280 x 960":
-            width, height = 1280, 960
-        elif result_resolution == "512 x 512":
-            width, height = 512, 512
+        resolution = result_resolution.split(" ")
+        width = int(resolution[0])
+        height = int(resolution[2])
     
     filepath = 'result.mp4'
     filepath_h264 = 'result_264.mp4'
@@ -196,7 +195,10 @@ def ProcessImage(image_vf, obj_detector, confidence_threshold, width, height):
             # img_url = send_to_bucket(img_name, crop_img_byte) # send to storage
             # insert_data(now, img_url, str(label)) # insert to DB
             st.sidebar.image(crop_img)
-            st.sidebar.write("No Helmet")
+            if classes[label] == '~A':
+                st.sidebar.write("Sharing")
+            else:
+                st.sidebar.write("No Helmet")
             st.sidebar.write(f"score : {conf:.3f}")
             st.sidebar.write(f"Time : {now}")
         elif label == 2:
