@@ -50,10 +50,16 @@ streamlit run streamlit-app.py
 ```
 
 ### 로컬 환경 셋팅
-  1. ```secrets.toml``` 파일을 ```.streamlit``` 폴더에 넣습니다.
-  2. requirements.txt 파일을 실행하여 필요 라이브러리들을 설치해 줍니다.
-  ``` pip install -r requirements.txt ```
-  3. 데이터 베이스 초기 셋팅을 해줍니다. ( DB Table setting )
-  ``` python init_database.py ```
-  4. streamlit을 실행시켜 줍니다.
-  ``` streamlit run streamlit-app.py ```
+  1. ```secrets.toml``` 파일을 ```.streamlit``` 폴더에 넣습니다. 
+  2. requirements.txt 파일을 실행하여 필요 라이브러리들을 설치해 줍니다. 
+  ```
+  pip install -r requirements.txt 
+  ```
+  3. 데이터 베이스 초기 셋팅을 해줍니다. ( DB Table setting ) 
+  ``` 
+  python init_database.py 
+  ```
+  4. streamlit을 실행시켜 줍니다. 
+  ``` 
+  streamlit run streamlit-app.py 
+  ```
