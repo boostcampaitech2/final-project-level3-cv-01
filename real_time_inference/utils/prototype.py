@@ -1,7 +1,13 @@
+import io
 import os
 import cv2
 import numpy as np
 import torch
+import streamlit as st
+
+from PIL import Image
+from gcloud import storage
+from oauth2client.service_account import ServiceAccountCredentials
 
 
 def DetermineBoxCenter(box):
@@ -11,7 +17,7 @@ def DetermineBoxCenter(box):
     return [cx, cy] 
 
 
-def drawBoxes(frame, pred, thres = 0.2): # thres 조절 추가 예정
+def drawBoxes(frame, pred, classes=['AH','A~H','~AH','~A~H'], thres = 0.2): # thres 조절 추가 예정
     pred_list = []
     pred = pred.to('cpu')
     boxColor = {
@@ -20,12 +26,12 @@ def drawBoxes(frame, pred, thres = 0.2): # thres 조절 추가 예정
         2: (0, 0, 255), # 헬멧O 혼자X 빨간색
         3: (255, 0, 0), # 헬멧X 혼자X 파란색
     }
-    className = {
-        0: "Helmet",
-        1: "NoHelmet",
-        2: "SharingHelmet",
-        3: "Sharing",
-    }
+
+    clsToName = {'H':'Helmet', '~H':'NoHelmet', 'A':'Alone','~A':'Sharing','AH':'Helmet','A~H':'NoHelmet','~AH':'SharingHelmet','~A~H':'SharingNoHelmet'}
+    className = {}
+    for i, cls in enumerate(classes):
+        className[i] = clsToName[cls]
+
     TextColor = (255, 255, 255) # white
     boxThickness = 3 
 
@@ -49,14 +55,16 @@ def drawBoxes(frame, pred, thres = 0.2): # thres 조절 추가 예정
 
 def lookup_checkpoint_files():
 
-    flie_list = list(os.listdir('/opt/ml/final_project/web/'))
-    flie_list.sort()
-    checkpoint_flie_list = []
-    for file in flie_list:
+    file_list = list(os.listdir('./checkpoint'))
+    file_list.sort()
+    checkpoint_file_list = []
+    for file in file_list:
         if file[-3:] == '.pt':
-            checkpoint_flie_list.append(file)
+            checkpoint_file_list.append(file)
+    
+    checkpoint_file_list.append('merge')
 
-    return tuple(checkpoint_flie_list)
+    return tuple(checkpoint_file_list)
 
 
 def np_to_tensor(image, device):
@@ -69,3 +77,29 @@ def np_to_tensor(image, device):
         image_tensor = image_tensor.unsqueeze(0)
 
     return image_tensor
+
+
+def image_to_byte_array(image:Image):
+    imgByteArr = io.BytesIO()
+    image.save(imgByteArr, format='png')
+    imgByteArr = imgByteArr.getvalue()
+    return imgByteArr
+
+
+def send_to_bucket(image_name, image_bytes):
+
+    credentials_dict = {
+        'type': 'service_account',
+        'client_id': st.secrets['gcp']['client_id'],
+        'client_email': st.secrets['gcp']['client_email'],
+        'private_key_id': st.secrets['gcp']['private_key_id'],
+        'private_key': st.secrets['gcp']['private_key'],
+    }
+    credentials = ServiceAccountCredentials.from_json_keyfile_dict(
+        credentials_dict
+    )
+    client = storage.Client(credentials=credentials, project=st.secrets['gcp']['project_id'])
+    bucket = client.get_bucket(st.secrets['gcp']['bucket'])
+    bucket.blob(image_name).upload_from_string(image_bytes)
+    image_url = bucket.blob(image_name).public_url
+    return image_url

@@ -54,6 +54,8 @@ def ProcessImage(image, obj_detector, confidence_threshold, width, height):
     image_resize = cv2.resize(image_np, (width, height))
     img = Image.fromarray(image_resize)
     image_tensor = np_to_tensor(image_resize, device)
+    current_catch_img = st.sidebar.empty() 
+    current_catch_text = st.sidebar.empty()
 
     pred = obj_detector(image_tensor)[0]
     pred = non_max_suppression(pred)[0]
@@ -67,20 +69,14 @@ def ProcessImage(image, obj_detector, confidence_threshold, width, height):
         crop_resion = (start + end)
         crop_img = img.crop(crop_resion)
         if label == 1:
-            st.sidebar.image(crop_img)
-            st.sidebar.write("No Helmet")
-            st.sidebar.write(f"score : {conf:.3f}")
-            st.sidebar.write(f"Time : {now}")
+            current_catch_img.image(crop_img)
+            current_catch_text.write(f"No Helmet, score : {conf:.3f}, Time : {now}")
         elif label == 2:
-            st.sidebar.image(crop_img)
-            st.sidebar.write("Sharing")
-            st.sidebar.write(f"score : {conf:.3f}")
-            st.sidebar.write(f"Time : {now}") 
+            current_catch_img.image(crop_img)
+            current_catch_text.write(f"Sharing, score : {conf:.3f}, Time : {now}")
         elif label == 3:
-            st.sidebar.image(crop_img)
-            st.sidebar.write("No Helmet & Sharing")
-            st.sidebar.write(f"score : {conf:.3f}")
-            st.sidebar.write(f"Time : {now}")   
+            current_catch_img.image(crop_img)
+            current_catch_text.write(f"No Helmet & Sharing, score : {conf:.3f}, Time : {now}")
     return image
 
 
