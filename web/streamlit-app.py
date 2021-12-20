@@ -128,7 +128,6 @@ def main():
             st.image(vf)
         else:
             vf = cv2.VideoCapture(tfile.name)
-        print(type(vf))
 
         if not state.run:
             start = start_button.button("start")
@@ -270,7 +269,6 @@ def ProcessFrames(vf, obj_detector, stop, confidence_threshold, width, height, c
         frame, pred_list = drawBoxes(frame, pred, classes, confidence_threshold)
         cvt_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         current_frame.image(cvt_frame)
-        print(type(frame)) 
         end = time.time()
         now = dt.datetime.now(KST).isoformat()
         for i in pred_list:
