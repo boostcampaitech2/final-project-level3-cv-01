@@ -69,8 +69,8 @@ def lookup_checkpoint_files():
 
 
 def np_to_tensor(image, device):
-    
-    image_tensor = np.transpose(image, (2, 0, 1))
+    image_tensor = rgba2rgb(image)
+    image_tensor = np.transpose(image_tensor, (2, 0, 1))
     image_tensor = torch.from_numpy(image_tensor).to(device)
     image_tensor = image_tensor.float()  # uint8 to fp16/32
     image_tensor /= 255.0  # 0 - 255 to 0.0 - 1.0
@@ -79,6 +79,25 @@ def np_to_tensor(image, device):
 
     return image_tensor
 
+# from https://stackoverflow.com/questions/50331463/convert-rgba-to-rgb-in-python
+def rgba2rgb( rgba, background=(255,255,255) ):
+    row, col, ch = rgba.shape
+
+    if ch == 3:
+        return rgba
+
+    assert ch == 4, 'RGBA image has 4 channels.'
+
+    rgb = np.zeros( (row, col, 3), dtype='float32' )
+    r, g, b, a = rgba[:,:,0], rgba[:,:,1], rgba[:,:,2], rgba[:,:,3]
+
+    a = np.asarray( a, dtype='float32' ) / 255.0
+    R, G, B = background
+    rgb[:,:,0] = r * a + (1.0 - a) * R
+    rgb[:,:,1] = g * a + (1.0 - a) * G
+    rgb[:,:,2] = b * a + (1.0 - a) * B
+
+    return np.asarray( rgb, dtype='uint8' )
 
 def image_to_byte_array(image:Image):
     imgByteArr = io.BytesIO()
