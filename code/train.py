@@ -597,7 +597,13 @@ if __name__ == '__main__':
                 'flipud': (1, 0.0, 1.0),  # image flip up-down (probability)
                 'fliplr': (0, 0.0, 1.0),  # image flip left-right (probability)
                 'mosaic': (1, 0.0, 1.0),  # image mixup (probability)
-                'mixup': (1, 0.0, 1.0)}  # image mixup (probability)
+                'mixup': (1, 0.0, 1.0),  # image mixup (probability)}  # image mixup (probability)
+                'grayscale': (1, 0.0, 1.0), # image grayscale (probability)
+                'imgaug': (1, 0.0, 1.0),  # image in imgaug augmentation (probability)
+                'rain': (1, 0.0, 1.0),  # image rain (probability)
+                'snow': (1, 0.0, 1.0),  # image snowflakes (probability)
+                'color': (1, 0.0, 1.0),  # image color (probability)
+                'allchannelsCLAHE': (1, 0.0, 1.0)}  # image allchannelsCLAHE (probability)
 
         assert opt.local_rank == -1, 'DDP mode not implemented for --evolve'
         opt.notest, opt.nosave = True, True  # only test/save final epoch
