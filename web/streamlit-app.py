@@ -419,7 +419,6 @@ def ProcessFramesMerge(vf, helmet_detector, alone_detector, stop, confidence_thr
             crop_img = img.crop(crop_region)
             # crop_img_byte = image_to_byte_array(crop_img) # image to byte
             # img_name = now + "_" + str(label) + uuid.uuid4().hex + "png" # DB image name
-            print(label)
             if label == 1:
                 # img_url = send_to_bucket(img_name, crop_img_byte) # send to storage
                 # insert_data(now, img_url, str(label)) # insert to DB
