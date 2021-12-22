@@ -60,8 +60,6 @@ def video2img(
     
     # 미리 색상 저장
     names = model.module.names if hasattr(model, 'module') else model.names
-    # names => [helmet, non_helmet, two_helmet, two_non_helmet] 인데 왜, 
-    # helmet은 color의 첫 번째, non_helmet은 세 번째, two_helmet은 두 번째, two_non_helmet은 네 번째인가...
     # 순서대로 helmet  two_helmet non_helmet two_non_helmet
     #          초록,       빨강,     파랑,      검정  
     colors = [[0,255,0],[255,0,0],[0,0,255],[0,0,0]]
@@ -213,7 +211,7 @@ def video2img_merge(
             exist_ok
             ):
     
-    #주석 처리한 video_cap.set(~~~)은 적용 안되는 것 같습니다. 혹시나 실행하실때 에러 뜨신다면 주석 풀어주세요.
+    # 혹시나 실행하실때 에러 뜨신다면 주석 풀어주세요.
     video_cap = cv2.VideoCapture(video)
     # video_cap.set(cv2.CAP_PROP_FRAME_WIDTH,512)
     # video_cap.set(cv2.CAP_PROP_FRAME_HEIGHT,512)
@@ -245,8 +243,6 @@ def video2img_merge(
 
     # 미리 색상 저장
     names = ['AH','A~H','~AH','~A~H']
-    # names => [helmet, non_helmet, two_helmet, two_non_helmet] 인데 왜, 
-    # helmet은 color의 첫 번째, non_helmet은 세 번째, two_helmet은 두 번째, two_non_helmet은 네 번째인가...
     # 순서대로 helmet  two_helmet non_helmet two_non_helmet
     #          초록,       빨강,     파랑,      검정  
     colors = [[0,255,0],[255,0,0],[0,0,255],[0,0,0]]
@@ -284,12 +280,6 @@ def video2img_merge(
         # Set Dataloader
         save_img = True
         dataset = LoadImages(source, img_size=imgsz, auto_size=64)
-
-        # Get names and colors
-        # if cnt == 0:
-        #     # 이렇게 랜덤으로 지정해주는 방법과, while 문 밖에서 미리 컬러 지정해주는 방법을 둘 다 사용 가능함.
-        #     names = model.module.names if hasattr(model, 'module') else model.names
-        #     colors = [[random.randint(0, 255) for _ in range(3)] for _ in names]
         
         # Run inference
         t0 = time.time()
@@ -470,8 +460,6 @@ if __name__ == '__main__':
     
     img2video(path_in, path_out)
 
-    #os.remove(output_path_img + 'video' + str(cnt).zfill(6) + '.jpg')
-    #os.remove(path_img + 'video' + str(cnt).zfill(6) + '.jpg')
     
     
 

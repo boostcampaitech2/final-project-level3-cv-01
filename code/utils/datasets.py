@@ -630,11 +630,9 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
             # if random.random() < 0.9:
             #     labels = cutout(img, labels)
 
-        # 이 부분에서 적용하시면 모자이크를 했을 때, 모자이크 전체에 적용이 됩니다.
-        #if random.random() < hyp['grayscale']:
+        # This part augmentation : after mosaic4 apply augmentation.
+        # if random.random() < hyp['grayscale']:
         #    img = rgb2gray(img)
-
-
 
         nL = len(labels)  # number of labels
         if nL:
@@ -931,7 +929,7 @@ class LoadImagesAndLabels9(Dataset):  # for training/testing
             # if random.random() < 0.9:
             #     labels = cutout(img, labels)
 
-        # 여기 모자이크9, 이 부분에서 적용하시면 모자이크 된 이미지에 모두 처리가 됩니다.
+        # This part augmentation : after mosaic9 apply augmentation.
         # if random.random() < hyp['grayscale']:
         #     img = rgb2gray(img)
 
@@ -978,14 +976,6 @@ def load_image(self, index, hyp):
     # loads 1 image from dataset, returns img, original hw, resized hw
     img = self.imgs[index]
 
-
-
-    # # 모자이크에서 하는게 아닌 각 이미지마다 augmentation 적용
-    # # hyp 불러오기
-    # with open('/opt/ml/yolor_d6/data/hyp.scratch.1280.yaml') as f:
-    #     hyp = yaml.load(f, Loader=yaml.FullLoader)  # load hyps
-
-
     if img is None:  # not cached
         path = self.img_files[index]
         img = cv2.imread(path)  # BGR
@@ -996,8 +986,9 @@ def load_image(self, index, hyp):
             interp = cv2.INTER_AREA if r < 1 and not self.augment else cv2.INTER_LINEAR
             img = cv2.resize(img, (int(w0 * r), int(h0 * r)), interpolation=interp)
 
+            # parser aug = y
             if aug_ == 'y':
-                # 이 부분에서 처리 하시면 각각의 이미지에 처리가 됩니다.
+                # This part augmentation : before mosaic apply augmentation.
                 if random.random() < hyp['grayscale']:
                     img = rgb2gray(img)
 
@@ -1011,13 +1002,13 @@ def load_image(self, index, hyp):
                     else:
                         img = img  
 
-                
                 else:
                     if random.random() < hyp['allchannelsCLAHE']:
                         img = imgaug_AllChannelsCLAHE(img)
                     else:
                         img = img
                 
+            # parser aug = n
             else:
                 img = img
 
@@ -1038,13 +1029,7 @@ def augment_hsv(img, hgain=0.5, sgain=0.5, vgain=0.5):
     lut_val = np.clip(x * r[2], 0, 255).astype(dtype)
 
     img_hsv = cv2.merge((cv2.LUT(hue, lut_hue), cv2.LUT(sat, lut_sat), cv2.LUT(val, lut_val))).astype(dtype)
-    #기존 코드
     cv2.cvtColor(img_hsv, cv2.COLOR_HSV2BGR, dst=img)  # no return needed
-    #cv2.cvtColor(img_hsv, cv2.COLOR_HSV2BGR, dst=img)
-    #cnt = 0
-    #cv2.cvtColor(img_hsv, cv2.COLOR_BGR2GRAY, dst=img)
-    #cv2.imwrite('/opt/ml/yolor_d6/runs/train/grayscale3/' + str(cnt).zfill(4) + '.jpg', img_hsv)
-    #cnt += 1
     
     # Histogram equalization
     # if random.random() < 0.2:
@@ -1255,20 +1240,13 @@ def random_perspective(img, targets=(), degrees=10, translate=.1, scale=.1, shea
     # Rotation and Scale
     R = np.eye(3)
 
-    # 로테이트 처리 하는 곳 입니다.
+    # hyp degrees (Rotate)
     a = random.uniform(-degrees, degrees)
-
     #a += random.choice([-180,-90,0,90])
-    #s = random.uniform(1, 1 + scale)
-
-    # 스케일 크기 처리 하는 곳 입니다.
-    # s = random.uniform(1.0-scale, 0.8)
-
-    # 기존 코드
-    # a = random.uniform(-degrees, degrees)
+    
+    # hyp scale (Scale)
     # # a += random.choice([-180, -90, 0, 90])  # add 90deg rotations to small rotations
     s = random.uniform(1 - scale, 1 + scale)
-    # s = 2 ** random.uniform(-scale, scale)
     R[:2] = cv2.getRotationMatrix2D(angle=a, center=(0, 0), scale=s)
 
     # Shear
