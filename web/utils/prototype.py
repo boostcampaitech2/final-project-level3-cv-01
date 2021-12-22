@@ -27,7 +27,8 @@ def drawBoxes(frame, pred, classes=['AH','A~H','~AH','~A~H'], thres = 0.2): # th
         3: (255, 0, 0), # 헬멧X 혼자X 파란색
     }
 
-    clsToName = {'H':'Helmet', '~H':'NoHelmet', 'A':'Alone','~A':'Sharing','AH':'Helmet','A~H':'NoHelmet','~AH':'SharingHelmet','~A~H':'SharingNoHelmet'}
+    clsToName = {'H':'Helmet', '~H':'NoHelmet', 'A':'Alone','~A':'Sharing','AH':'Helmet','A~H':'NoHelmet','~AH':'SharingHelmet','~A~H':'SharingNoHelmet','helmet' : 'Helmet', 'non_helmet' : 'NoHelmet', 'two_helmet':'SharingHelmet', 'two_non_helmet':'SharingNoHelmet'
+}
     className = {}
     for i, cls in enumerate(classes):
         className[i] = clsToName[cls]

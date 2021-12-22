@@ -45,7 +45,6 @@ def trigger_rerun():
     session_infos = Server.get_current()._session_info_by_id.values() 
     for session_info in session_infos:
         this_session = session_info.session
-    # this_session.request_rerun()
     st.experimental_rerun()
 
 
@@ -72,7 +71,6 @@ def main():
     upload = st.empty()
     start_button = st.empty()
     stop_button = st.empty()
-
     current_frame = st.empty()
 
     with upload:
@@ -182,10 +180,7 @@ def ProcessImage(image_vf, obj_detector, confidence_threshold, width, height):
     now = dt.datetime.now(KST).isoformat().split('.')[0]
     st.image(image)
     for i in pred_list:
-        start_p = i[0]
-        end_p = i[1]
-        conf = i[2]
-        label = i[3]
+        start_p, end_p, conf, label = i
         crop_region = (start_p + end_p)
         crop_img = img.crop(crop_region)
         # crop_img_byte = image_to_byte_array(crop_img) # image to byte
@@ -215,6 +210,7 @@ def ProcessImage(image_vf, obj_detector, confidence_threshold, width, height):
             st.sidebar.write(f"score : {conf:.3f}")
             st.sidebar.write(f"Time : {now}")      
 
+
 def ProcessFrames(vf, obj_detector, stop, confidence_threshold, width, height, current_frame): 
     """
         main loop for processing video file:
@@ -232,10 +228,10 @@ def ProcessFrames(vf, obj_detector, stop, confidence_threshold, width, height, c
 
 
     frame_counter = 0
-    processing_discript = st.empty()
-    processing_discript.write("👆처리중인 영상의 모습입니다.")
+    processing_txt = st.empty()
+    processing_txt.write("👆처리중인 영상의 모습입니다.")
     _stop = stop.button("stop")
-    fps_meas_txt = st.empty()
+    fps_mean_txt = st.empty()
     bar = st.progress(frame_counter)
     start = time.time()
     fourcc = cv2.VideoWriter_fourcc(*'mp4v') # output video codec
@@ -244,7 +240,7 @@ def ProcessFrames(vf, obj_detector, stop, confidence_threshold, width, height, c
                         ) # Warning: 마지막 파라미터(이미지 크기 예:(1280, 960))가 안 맞으면 동영상이 저장이 안 됨!
 
     current_catch_img = st.sidebar.empty() 
-    current_catch_text = st.sidebar.empty()
+    current_catch_txt = st.sidebar.empty()
 
     while vf.isOpened():
         # if frame is read correctly ret is True
@@ -272,10 +268,7 @@ def ProcessFrames(vf, obj_detector, stop, confidence_threshold, width, height, c
         end = time.time()
         now = dt.datetime.now(KST).isoformat()
         for i in pred_list:
-            start_p = i[0]
-            end_p = i[1]
-            conf = i[2]
-            label = i[3]
+            start_p, end_p, conf, label = i
             crop_region = (start_p + end_p)
             crop_img = img.crop(crop_region)
             # crop_img_byte = image_to_byte_array(crop_img) # image to byte
@@ -284,21 +277,21 @@ def ProcessFrames(vf, obj_detector, stop, confidence_threshold, width, height, c
                 # img_url = send_to_bucket(img_name, crop_img_byte) # send to storage
                 # insert_data(now, img_url, str(label)) # insert to DB
                 current_catch_img.image(crop_img, use_column_width='always')
-                current_catch_text.write(f"No Helmet \n score : {conf:.3f} \n Time : {now}")
+                current_catch_txt.write(f"No Helmet \n score : {conf:.3f} \n Time : {now}")
             elif label == 2:
                 # img_url = send_to_bucket(img_name, crop_img_byte) # send to storage
                 current_catch_img.image(crop_img, use_column_width='always')
-                current_catch_text.write(f"Sharing \n score : {conf:.3f} \n Time : {now}")
+                current_catch_txt.write(f"Sharing \n score : {conf:.3f} \n Time : {now}")
                 # insert_data(now, img_url, str(label)) # insert to DB
             elif label == 3:
                 current_catch_img.image(crop_img, use_column_width='always')
-                current_catch_text.write(f"No Helmet & Sharing \n score : {conf:.3f} \n Time : {now}")
+                current_catch_txt.write(f"No Helmet & Sharing \n score : {conf:.3f} \n Time : {now}")
                 # img_url = send_to_bucket(img_name, crop_img_byte) # send to storage
                 # insert_data(now, img_url, str(label)) # insert to DB
 
         frame_counter += 1
         fps_measurement = frame_counter/(end - start)
-        fps_meas_txt.markdown(f'**Frames per second:** {fps_measurement:.2f}')
+        fps_mean_txt.markdown(f'**Frames per second:** {fps_measurement:.2f}')
         bar.progress(frame_counter/num_frames)        
         video_writer.write(frame)
 
@@ -308,10 +301,11 @@ def ProcessFrames(vf, obj_detector, stop, confidence_threshold, width, height, c
         os.system("ffmpeg -i result.mp4 -vcodec libx264 result_h264.mp4 -y")
     video_file = open("result_h264.mp4", 'rb')
     video_bytes = video_file.read()
-    processing_discript.empty()
+    processing_txt.empty()
     current_frame.empty()
     st.video(video_bytes)
     st.write("되돌아가시려면 사이드바 메뉴에서 아무거나 선택하세요.")
+
 
 def ProcessImageMerge(image_vf, helmet_detector, alone_detector, confidence_threshold, width, height):
     image_np = np.array(image_vf) #pil to cv
@@ -331,10 +325,7 @@ def ProcessImageMerge(image_vf, helmet_detector, alone_detector, confidence_thre
     now = dt.datetime.now(KST).isoformat().split('.')[0]
     st.image(image)
     for i in pred_list:
-        start_p = i[0]
-        end_p = i[1]
-        conf = i[2]
-        label = i[3]
+        start_p, end_p, conf, label = i
         crop_region = (start_p + end_p)
         crop_img = img.crop(crop_region)
         # crop_img_byte = image_to_byte_array(crop_img) # image to byte
@@ -361,6 +352,7 @@ def ProcessImageMerge(image_vf, helmet_detector, alone_detector, confidence_thre
             st.sidebar.write(f"score : {conf:.3f}")
             st.sidebar.write(f"Time : {now}")      
 
+
 def ProcessFramesMerge(vf, helmet_detector, alone_detector, stop, confidence_threshold, width, height, current_frame): 
     """
         main loop for processing video file:
@@ -377,12 +369,12 @@ def ProcessFramesMerge(vf, helmet_detector, alone_detector, stop, confidence_thr
         print('We cannot determine number of frames and FPS!')
 
     current_catch_img = st.sidebar.empty() 
-    current_catch_text = st.sidebar.empty()
+    current_catch_txt = st.sidebar.empty()
     frame_counter = 0
-    processing_discript = st.empty()
-    processing_discript.write("👆처리중인 영상의 모습입니다.")
+    processing_txt = st.empty()
+    processing_txt.write("👆처리중인 영상의 모습입니다.")
     _stop = stop.button("stop")
-    fps_meas_txt = st.empty()
+    fps_mean_txt = st.empty()
     bar = st.progress(frame_counter)
     start = time.time()
     fourcc = cv2.VideoWriter_fourcc(*'mp4v') # output video codec
@@ -422,33 +414,31 @@ def ProcessFramesMerge(vf, helmet_detector, alone_detector, stop, confidence_thr
         end = time.time()
         now = dt.datetime.now(KST).isoformat()
         for i in pred_list:
-            start_p = i[0]
-            end_p = i[1]
-            conf = i[2]
-            label = i[3]
+            start_p, end_p, conf, label = i
             crop_region = (start_p + end_p)
             crop_img = img.crop(crop_region)
             # crop_img_byte = image_to_byte_array(crop_img) # image to byte
             # img_name = now + "_" + str(label) + uuid.uuid4().hex + "png" # DB image name
+            print(label)
             if label == 1:
                 # img_url = send_to_bucket(img_name, crop_img_byte) # send to storage
                 # insert_data(now, img_url, str(label)) # insert to DB
                 current_catch_img.image(crop_img, use_column_width='always')
-                current_catch_text.write(f"No Helmet \n score : {conf:.3f} \n Time : {now}")
+                current_catch_txt.write(f"No Helmet \n score : {conf:.3f} \n Time : {now}")
             elif label == 2:
                 # img_url = send_to_bucket(img_name, crop_img_byte) # send to storage
                 current_catch_img.image(crop_img, use_column_width='always')
-                current_catch_text.write(f"Sharing \n score : {conf:.3f} \n Time : {now}")
+                current_catch_txt.write(f"Sharing \n score : {conf:.3f} \n Time : {now}")
                 # insert_data(now, img_url, str(label)) # insert to DB
             elif label == 3:
                 current_catch_img.image(crop_img, use_column_width='always')
-                current_catch_text.write(f"No Helmet & Sharing \n score : {conf:.3f} \n Time : {now}")
+                current_catch_txt.write(f"No Helmet & Sharing \n score : {conf:.3f} \n Time : {now}")
                 # img_url = send_to_bucket(img_name, crop_img_byte) # send to storage
                 # insert_data(now, img_url, str(label)) # insert to DB
 
         frame_counter += 1
         fps_measurement = frame_counter/(end - start)
-        fps_meas_txt.markdown(f'**Frames per second:** {fps_measurement:.2f}')
+        fps_mean_txt.markdown(f'**Frames per second:** {fps_measurement:.2f}')
         bar.progress(frame_counter/num_frames)        
         video_writer.write(frame)
 
@@ -458,7 +448,7 @@ def ProcessFramesMerge(vf, helmet_detector, alone_detector, stop, confidence_thr
         os.system("ffmpeg -i result.mp4 -vcodec libx264 result_h264.mp4 -y")
     video_file = open("result_h264.mp4", 'rb')
     video_bytes = video_file.read()
-    processing_discript.empty()
+    processing_txt.empty()
     current_frame.empty()
     st.video(video_bytes)
     st.write("되돌아가시려면 사이드바 메뉴에서 아무거나 선택하세요.")
