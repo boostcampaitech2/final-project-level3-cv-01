@@ -106,7 +106,7 @@ def main():
         
         result_resolution = st.sidebar.radio(
             "select result video resolution",
-            ("512 x 512", "768 x 576", "1280 x 960",)
+            ("512 x 320", "512 x 512", "768 x 576", "1280 x 960",)
         )
 
         resolution = result_resolution.split(" ")
