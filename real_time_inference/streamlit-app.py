@@ -44,7 +44,7 @@ def trigger_rerun():
     st.experimental_rerun()
 
 
-def ProcessImage(image, obj_detector, confidence_threshold, width, height):
+def ProcessImage(image, obj_detector, confidence_threshold, width, height, current_catch_img, current_catch_text):
     '''
     input: image, obj_detector, confidence_threshold, width, height
     output: 박스친 이미지, label의 배열
@@ -54,12 +54,14 @@ def ProcessImage(image, obj_detector, confidence_threshold, width, height):
     image_resize = cv2.resize(image_np, (width, height))
     img = Image.fromarray(image_resize)
     image_tensor = np_to_tensor(image_resize, device)
-    current_catch_img = st.sidebar.empty() 
-    current_catch_text = st.sidebar.empty()
 
     pred = obj_detector(image_tensor)[0]
     pred = non_max_suppression(pred)[0]
-    image, pred_list = drawBoxes(image, pred, confidence_threshold)
+    classes = obj_detector.module.names if hasattr(obj_detector, 'module') else obj_detector.names
+
+
+
+    image, pred_list = drawBoxes(image_resize, pred, classes=classes, thres=confidence_threshold)
     now = dt.datetime.now(KST).isoformat().split('.')[0]
     for i in pred_list:
         start = i[0]
@@ -82,22 +84,25 @@ def ProcessImage(image, obj_detector, confidence_threshold, width, height):
 
 def main():
 
-    st.set_page_config(page_title = "안전모 미착용, 승차인원 초과 멈춰~!", 
+    st.set_page_config(page_title = "PM 위법행위 탐지 시스템", 
     page_icon=":scooter:")
-    
+    st.title("PM 위법행위 감지 시스템")
+    st.write("영상에서 헬멧 미착용, 승차인원 초과행위를 탐지하는 시스템 입니다.")
 
     state = SessionState.get(upload_key = None, enabled = True, start = False, conf = 70, nms = 50, run = False)
 
     stframe = st.empty()
 
-    st.sidebar.write('hello?')
+    st.sidebar.write('잡았다 요놈!')
+    current_catch_img = st.sidebar.empty() 
+    current_catch_text = st.sidebar.empty()
 
     while True:
         if os.path.exists('test.jpg'):
             try:
                 image = Image.open('test.jpg')
                 image = ImageOps.exif_transpose(image) # pil은 자동으로 이미지를 가로가 길도록 돌려버리는데 이를 방지하는 코드
-                image = ProcessImage(image, model, 0.9, 512, 512)
+                image = ProcessImage(image, model, 0.9, 512, 512, current_catch_img, current_catch_text)
                 stframe.image(image, width = 720)
 
             except OSError:
