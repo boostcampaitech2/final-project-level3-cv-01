@@ -235,9 +235,7 @@ def ProcessFrames(vf, obj_detector, stop, confidence_threshold, width, height, c
     bar = st.progress(frame_counter)
     start = time.time()
     fourcc = cv2.VideoWriter_fourcc(*'mp4v') # output video codec
-    video_writer = cv2.VideoWriter(
-                            "result.mp4", fourcc, fps, (width, height)
-                        ) # Warning: 마지막 파라미터(이미지 크기 예:(1280, 960))가 안 맞으면 동영상이 저장이 안 됨!
+    video_writer = cv2.VideoWriter("result.mp4", fourcc, fps, (width, height))
 
     current_catch_img = st.sidebar.empty() 
     current_catch_txt = st.sidebar.empty()
@@ -378,9 +376,7 @@ def ProcessFramesMerge(vf, helmet_detector, alone_detector, stop, confidence_thr
     bar = st.progress(frame_counter)
     start = time.time()
     fourcc = cv2.VideoWriter_fourcc(*'mp4v') # output video codec
-    video_writer = cv2.VideoWriter(
-                            "result.mp4", fourcc, fps, (width, height)
-                        ) # Warning: 마지막 파라미터(이미지 크기 예:(1280, 960))가 안 맞으면 동영상이 저장이 안 됨!
+    video_writer = cv2.VideoWriter("result.mp4", fourcc, fps, (width, height))
 
     while vf.isOpened():
         # if frame is read correctly ret is True
