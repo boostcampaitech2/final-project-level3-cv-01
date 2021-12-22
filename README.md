@@ -46,3 +46,38 @@
 - 이용자의 헬멧 착용여부와 동승여부 분류
 - PM과 이용자를 함께 detection하고 분류
 - 휴대폰 사용여부, 연령까지 확장 가능
+</br>
+
+## 👨‍💻Model
+### [YOLOR-D6](https://github.com/WongKinYiu/yolor)
+![YOLOR](https://user-images.githubusercontent.com/64246382/147086551-b343ddcf-1b2f-45fc-a1f5-7ea266826e80.png)
+![YOLOR2](https://user-images.githubusercontent.com/64246382/147086604-eeb2f681-fdd4-40dd-8dd0-206e964a96f4.png)
+- 1 Stage Detection 모델
+- 빠른 속도, 보장된 성능
+- 동영상 inference
+- 핵심 키워드 : Implicit Knowledge
+</br>
+
+### **YOLOR 모델 구조**
+
+![model1](https://user-images.githubusercontent.com/64246382/147089362-ba75b944-f236-42f5-a7b7-2628c78224ed.PNG)
+### **Backbone** : CSPDarkNet53
+- DarkNet53에 CSP 적용
+- Feature를 둘로 나누어 하나의 Part만 연산하고 Concat
+- Feature map이 누적되어 계산되는 DenseNet의 문제점 극복
+
+![model2](https://user-images.githubusercontent.com/64246382/147090815-28dbaf8b-4ff5-4771-9dd8-0ce629b91951.PNG)
+### **Head** : YOLOv4-large Head
+- Spatial Pyramid Pooling 적용
+- Multi Level Feature 사용
+  - Semantic한 정보와 Fine-grained 정보를 포함
+- Implicit Knowledge 적용
+  - Addition, Multiplication 방식
+  - Good representation을 통해 데이터를 잘 구분할 수 있는 Hyper plain을 찾아서 성능 향상
+
+### **최종 모델**
+![model3](https://user-images.githubusercontent.com/64246382/147091304-4d616919-2f15-468e-b88c-dcc19673a2d9.PNG)
+</br>
+
+## 🙌결과
+
