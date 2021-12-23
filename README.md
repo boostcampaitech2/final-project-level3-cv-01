@@ -90,6 +90,7 @@
 | Sharing no Helmet | 0.964 | 0.871 | 0.927 | 0.729 |
 </br>
 
-## 🙆‍♂️프로토타입 사용 방법
-
+## 🙆‍♂️프로토타입
+### **Image**
+![streamlit-streamlit-app-2021-12-23-12-12-45](https://user-images.githubusercontent.com/64246382/147184799-ba9ec713-5f0e-427e-82ad-961ffb6edb34.gif)
 
