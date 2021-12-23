@@ -1,7 +1,5 @@
 # YOLOR
 
-## Version 0.1
-
 ### Installation
 ```
 pip install -r requirements.txt
@@ -22,7 +20,7 @@ test: /opt/ml/yolor/yolor/img/test/images
 - Train
 
 ```
-python train.py --batch-size <원하는 배치 사이즈 수> --img <원하는 이미지 크기> --data <yaml 파일 위치> --cfg <d6의 cfg 위치->yaml파일 입니다>--weights <yolor-d6.pt 파일 위치> --device 0 --name <runs/train에 저장될 디렉터리 이름> --hyp data/hyp.scratch.1280.yaml --epochs <원하는 에폭 수>
+python train.py --batch-size <원하는 배치 사이즈 수> --img <원하는 이미지 크기> --data <yaml 파일 위치> --cfg <d6의 cfg 위치->yaml파일 입니다>--weights <yolor-d6.pt 파일 위치> --device 0 --name <runs/train에 저장될 디렉터리 이름> --hyp data/hyp.scratch.1280.yaml --epochs <원하는 에폭 수> --hyp <hyp 파일 위치>
 ```
 
 
@@ -36,10 +34,10 @@ python train.py --batch-size 8 --img 512 512 --data data/yolor_test.yaml --cfg m
 - Test
 
 ```
-python test.py --img <이미지 크기> --conf 0.001 --iou <iou 설정> --batch <배치 수> --device 0 --data <yaml 파일 위치> --weights <train에서 나온 pt파일> --name <runs/test에 저장될 이름>
+python test.py --img <이미지 크기> --conf 0.001 --iou <iou 설정> --batch <배치 수> --device 0 --data <yaml 파일 위치> --weights <train에서 나온 pt파일> --name <runs/test에 저장될 이름> --task <val or test>
 ```
 
 - Example
 ```
-python test.py --img 512 --conf 0.001 --iou 0.5 --batch 32 --device 0 --data data/yolor_test.yaml --weights runs/train/yolor_d63/weights/best_ap.pt --name yolor-d6_val
+python test.py --img 512 --conf 0.001 --iou 0.5 --batch 32 --device 0 --data data/yolor_test.yaml --weights runs/train/yolor_d63/weights/best_ap.pt --name yolor-d6_val --task test
 ```
