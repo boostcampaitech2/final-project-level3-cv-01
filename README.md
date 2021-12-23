@@ -49,7 +49,8 @@
 </br>
 
 ## 👨‍💻Model
-### [YOLOR-D6](https://github.com/WongKinYiu/yolor)
+### [YOLOR-D6(Github)](https://github.com/WongKinYiu/yolor)
+### [YOLOR 논문](https://arxiv.org/pdf/2105.04206v1.pdf)
 ![YOLOR](https://user-images.githubusercontent.com/64246382/147086551-b343ddcf-1b2f-45fc-a1f5-7ea266826e80.png)
 ![YOLOR2](https://user-images.githubusercontent.com/64246382/147086604-eeb2f681-fdd4-40dd-8dd0-206e964a96f4.png)
 - 1 Stage Detection 모델
