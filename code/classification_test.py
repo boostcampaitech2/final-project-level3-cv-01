@@ -8,7 +8,7 @@ from tqdm import tqdm
 import torch
 import numpy as np
 
-from classification.model import EfficientNetV2
+from classification.models import EfficientNetV2
 from classification.datasets import create_dataloader
 from classification.metrics import compute_metrics
 

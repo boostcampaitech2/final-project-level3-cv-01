@@ -9,15 +9,17 @@ import torch
 import torch.optim as optim
 import torch.optim.lr_scheduler as lr_scheduler
 from tqdm import tqdm
+from typing import Dict
 
 from classification.datasets import create_dataloader
-from classification.model import EfficientNetV2
+from classification.models import EfficientNetV2, Model
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Train Segmentation Model')
+    parser = argparse.ArgumentParser(description='Train Classification Model')
 
     parser.add_argument('config', type=str, help='config file path')
+    parser.add_argument('--model', type=str, default='resnet101', help='model name')
     parser.add_argument('--epochs', type=int, default=50, help='number of epochs')    
     parser.add_argument('--img-size', type=int, default=1280, help='train image size')
     parser.add_argument('--batch-size', type=int, default=8, help='total batch size for all GPUs')
@@ -30,7 +32,9 @@ def parse_args():
     return args
 
 
-def train(args, epochs, cfg_dict, device):
+def train(args:argparse.Namespace,
+        epochs:int, cfg_dict:Dict,
+        device:torch.device) -> None:
 
     save_dir = osp.join(args.save_dir, args.name, 'weights')
     os.makedirs(save_dir, exist_ok=True)
@@ -41,12 +45,12 @@ def train(args, epochs, cfg_dict, device):
     train_loader = create_dataloader(cfg_dict['train'], args.img_size, args.batch_size, workers=8)
     valid_loader = create_dataloader(cfg_dict['valid'], args.img_size, args.batch_size, workers=8)
 
-    model = EfficientNetV2(num_classes=4).to(device)
+    model = Model(name=args.model, num_classes=4, pretrained=True).to(device)
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=cfg_dict['lr'], momentum=cfg_dict['momentum'])
 
-    # lf = lambda x: ((1 + math.cos(x * math.pi / epochs)) / 2) * (1 - cfg_dict['lrf']) + cfg_dict['lrf']  # cosine
-    # scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lf)
+    lf = lambda x: ((1 + math.cos(x * math.pi / epochs)) / 2) * (1 - cfg_dict['lrf']) + cfg_dict['lrf']  # cosine
+    scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lf)
 
     best_acc = -1.0
     best_loss = 1e6
@@ -57,6 +61,7 @@ def train(args, epochs, cfg_dict, device):
         train_loss = 0.0
         train_acc = 0.0
 
+        # Train
         print(f"Epoch : {epoch}/{epochs}")
         pbar = tqdm(enumerate(train_loader), total=len(train_loader))
         for _, (images, labels) in pbar:
@@ -79,9 +84,12 @@ def train(args, epochs, cfg_dict, device):
         train_loss /= len(train_loader)
         train_acc /= len(train_loader.dataset)
 
+        # scheduler.step()
+
         print(f"train accuracy : {train_acc:7.3f} | train loss : {train_loss:7.3f}")
         wandb.log({'train/accuracy': train_acc, 'train/loss': train_loss, 'z(etc)/lr':optimizer.param_groups[0]['lr']})
 
+        # Validation
         with torch.no_grad():
             model.eval()
             valid_loss = 0.0
@@ -113,14 +121,6 @@ def train(args, epochs, cfg_dict, device):
                 best_loss = valid_loss
                 torch.save(model.state_dict(), loss_name)
 
-    # scheduler.step()
-
-    # TODO : train classification model
-    # 1. create loader
-    # 3. train
-    # 4. comput loss
-    # 5. validation
-    # 6. save checkpoint
 
 if __name__ == "__main__":
     args = parse_args()
