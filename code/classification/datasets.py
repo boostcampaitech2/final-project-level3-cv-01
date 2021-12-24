@@ -172,7 +172,8 @@ def crop_image(image, box, image_size):
     ratio = image_size / max_len    
     
     resized_image = cv2.resize(cropped_image,
-                           dsize=(int(new_w * ratio), int(new_h * ratio)),
+                           dsize=(image_size, image_size),
+                        #    dsize=(int(new_w * ratio), int(new_h * ratio)),
                            interpolation=cv2.INTER_LINEAR)
 
     return resized_image
